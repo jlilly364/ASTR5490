@@ -15,7 +15,7 @@ from ReadFile import Read
 
 class Periodicity:
     
-    def __init__(self,filename,objectname,numPoints,period=None):
+    def __init__(self,filename,objectname,numPoints,contiguous=True,period=None):
         # Inputs:
         #     filename: file path or file name (if file in same folder as notebook)
         #     objectname: name of object you're plotting curve of
@@ -29,6 +29,30 @@ class Periodicity:
         # Extract time, flux, and error data from text file
         self.times,self.fluxes,self.errors = Read(self.file)
 
+        # Decide what times array to make
+        if self.numPoints == None:
+            self.times = [time - self.times[0] for time in self.times]
+        else:
+            if contiguous == True:
+                # Select contiguous interval of points
+                self.times = [time - self.times[0] for time in self.times[:self.numPoints]]
+                self.fluxes = self.fluxes[:self.numPoints]
+                self.errors = self.errors[:self.numPoints]
+            else:
+                # Select sparsed interval of data
+                self.times_i = [time - self.times[0] for time in self.times[:self.numPoints]]
+                self.times_f = [time - self.times[0] for time in self.times[-self.numPoints:]]
+                self.times = self.times_i + self.times_f
+                
+                # Concatenate first and last n elements of flux list
+                self.fluxes_i = self.fluxes[:self.numPoints]
+                self.fluxes_f = self.fluxes[-self.numPoints:]
+                self.fluxes = [*self.fluxes_i,*self.fluxes_f]
+                
+                # Concatenate first and last n elements of error list
+                self.errors_i = self.errors[:self.numPoints]
+                self.errors_f = self.errors[-self.numPoints:]
+                self.errors = [*self.errors_i,*self.errors_f]
 
     # Function for plotting light curves from text file
     def LightCurve(self,plot=True,xaxis='Time',curve='Flux'):
@@ -40,13 +64,6 @@ class Periodicity:
         #     xdata: array with data from x-axis
         #     fluxes: array with associated y-axis data
         #     errors: measurement errors read from text file
-        
-        # Decide what times array to make
-        if self.numPoints == None:
-            self.times = [time - self.times[0] for time in self.times]
-        else:
-            self.times = [time - self.times[0] for time in self.times[:self.numPoints]]
-            self.fluxes = self.fluxes[:self.numPoints]       
         
         # Define list of data to plot on x-axis (time or phase)
         xdata = []
@@ -94,15 +111,10 @@ class Periodicity:
 
 
     # Function to generate power spectrum from a flux vs. time dataset
-    def LS(self,minP,maxP,numIntervals,i,flux,error,plot=False,trueP=None,days=None):
-    
-        if len(flux) == 0:
-            flux = self.fluxes
-            error = self.errors
+    def LS(self,minP,maxP,numIntervals,i,flux,plot=False,trueP=None):
         
-        if days != None:
-            increment = days*50 # Approximately 50 data points per day
-            self.times,self.fluxes,self.errors = self.times[:increment],self.fluxes[:increment],self.errors[:increment]
+        if flux == []:
+            flux = self.fluxes
         
         # Define range of frequencies to search over
         minfreq = 1./maxP
@@ -112,7 +124,7 @@ class Periodicity:
         frequency = np.linspace(minfreq,maxfreq,numIntervals)
     
         # Use LombScargle method to calculate power as a function of those frequencies
-        power = LombScargle(self.times,flux,error,nterms=i).power(frequency)
+        power = LombScargle(self.times,flux,self.errors,nterms=i).power(frequency)
         
         # Find maximum power and frequency/period of maximum power
         maxp = np.max(power) 
@@ -142,6 +154,43 @@ class Periodicity:
             ax.legend(loc='center left',bbox_to_anchor=(1, 0.5))
         
         return(maxp)
-
-#Virb = Periodicity('Vogt2009_61Virb_vels.dat','61 Vir b',None,None)
-#Virb.LS = Virb.LS(0.1,100,1000,1)
+    
+    # Function to calculate the false alarm probability of a radial velocity detection
+    def FAP(self,numIterations):
+        # Calculate stats of errors on RV measurements
+        meanErr = np.mean(self.errors)
+        stddevErr = np.std(self.errors)
+        length = len(self.errors)
+        
+        # Empty list of maximum powers
+        maxPowers = []
+        numExceed = 0
+    
+        # Set number of iterations for loop
+        numIterations = 10000
+        
+        # Calculate max power from non-noisy data
+        original_maxPower = self.LS(35,45,1000,1,flux=self.fluxes)
+    
+        # Monte Carlo simulation of 10000 noise profiles
+        # Used to calculate False Alarm Probability (FAP)
+        for i in range(numIterations):
+            
+            # Generate Gaussian noise to add to RV measurements
+            noise = np.random.normal(meanErr,stddevErr,length)
+    
+            # Add noise to RV measurements
+            newRVs = np.add(self.fluxes,noise)
+    
+            # Calculate maximum power in the Lomb-Scargle periodogram
+            maxPower = self.LS(35,45,1000,1,flux=newRVs)
+            maxPowers.append(maxPower)
+    
+            # Check if maximum power exceeds that of period in non-noisy data
+            if maxPower > original_maxPower:
+                numExceed += 1
+            
+        # Calculate FAP
+        FAP = numExceed/numIterations
+        print('FAP = {0:.3e}'.format(FAP))
+        return(FAP)
