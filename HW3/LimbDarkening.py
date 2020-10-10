@@ -17,7 +17,6 @@ class LimbDarkening():
         self.a = a
         self.b = b
         
-        
     # Function to calculate quadratic limb darkening profile
     def QuadIntensity(self,x,y):
         # Inputs:
@@ -65,7 +64,7 @@ class LimbDarkening():
             # Plot color grid of intensities at each location
             plt.pcolor(x,y,intensities)
             cbar = plt.colorbar()
-            cbar.set_label('Brightness Relative to Center')
+            cbar.set_label('Surface Brightness')
             plt.xlabel(r'x ($R_{star}$)')
             plt.ylabel(r'y ($R_{star}$)')
             plt.title(r'Surface Brightness of G2V at $5000\AA$')
