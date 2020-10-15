@@ -94,6 +94,7 @@ def ChiSquared(model,observation,error,free):
 def Gaussian(x,offset,amplitude,mean,stddev,wavelength=5000.0):
     # Inputs:
     #   x: point at which to calculate Gaussian (can be a list of values)
+    #   offset: set continuum level of Gaussian
     #   amplitude: peak depth of function
     #   mean: center of Gaussian
     #   stddev: width of Gaussian
@@ -109,6 +110,17 @@ def Gaussian(x,offset,amplitude,mean,stddev,wavelength=5000.0):
     function = offset-(amplitude*np.exp(exponent))
     
     return(function)
+
+# Function to calculate non-relativistic doppler shift
+def NonRelDoppler(new_value,rest=5000.0):
+    
+    # Convert speed of light to km/s
+    c = const.c.to(u.km/u.s).value
+    
+    # Calculate new velocity
+    velocity = ((new_value/rest)-1)*c
+    
+    return(velocity)
 
 """wavelength = 5000.0
 offset = 1.0
