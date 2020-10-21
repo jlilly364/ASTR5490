@@ -7,6 +7,7 @@ Created on Mon Oct  5 13:16:09 2020
 """
 # Import numpy module
 import numpy as np
+import matplotlib.pyplot as plt
 
 # Function to read simple text files
 def Read(filename,skip=2,unpack_bool=True):
