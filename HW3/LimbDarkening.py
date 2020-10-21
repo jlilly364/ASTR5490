@@ -8,6 +8,7 @@ Created on Tue Oct  6 16:15:04 2020
 import numpy as np
 import matplotlib.pyplot as plt
 
+# Class to generate intensity-weighted stellar profile
 class LimbDarkening():
     
     def __init__(self,a,b):
@@ -39,15 +40,17 @@ class LimbDarkening():
         
         # Calculate intensity at r
         intensity = 1.0*(1-first_term-second_term)
-        #print(r,mu,first_term,second_term,intensity)
-        return(intensity)
+       
+        return(r,intensity)
     
     # Function to plot intensity of points on stellar disc
     def StarVisualize(self,gridsize,plot=True):
         # Inputs:
         #   gridsize: square dimension of grid (gridsize x gridsize)
+        #   plot: boolean to choose to plot star or not
         # Returns:
-        #   Intensity at that location
+        #   intensity colormap of star
+        #   grid of x and y coordinates & intensities at each coordinate
         
         # Set lower bounds and size of grid
         x0, y0 = -1.01,-1.0
@@ -58,13 +61,21 @@ class LimbDarkening():
         x,y = np.meshgrid(x_list,y_list)
         
         # Calculate intensity at each x,y pair
-        intensities = self.QuadIntensity(x,y)
+        radii, intensities = self.QuadIntensity(x,y)
 
+        print(intensities)
         if plot == True:
             # Plot color grid of intensities at each location
-            plt.pcolor(x,y,intensities)
+            plt.pcolor(x,y,intensities,shading='auto')
             cbar = plt.colorbar()
             cbar.set_label('Surface Brightness')
             plt.xlabel(r'x ($R_{star}$)')
             plt.ylabel(r'y ($R_{star}$)')
             plt.title(r'Surface Brightness of G2V at $5000\AA$')
+            plt.xlim(-1.2,1.2)
+            plt.ylim(-1.1,1.1)
+            
+        return(x,y,intensities)
+
+star = LimbDarkening(633.27/1000,159.56/1000)
+x,y,intensities = star.StarVisualize(1000,plot=False)
