@@ -8,6 +8,8 @@ Created on Tue Oct  6 16:15:04 2020
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+
+# Figure out time code started to be used
 start_time = time.time()
 
 # Class to generate intensity-weighted stellar profile
@@ -32,7 +34,6 @@ class LimbDarkening():
         elif self.star_temp == 3600:
             self.a = .626
             self.b = .226
-        
         
     # Function to calculate quadratic limb darkening profile
     def QuadIntensity(self,x,y):
@@ -62,7 +63,6 @@ class LimbDarkening():
     # Function to plot intensity of points on stellar disc
     def Star(self,plot=True):
         # Inputs:
-        #   gridsize: square dimension of grid (gridsize x gridsize)
         #   plot: boolean to choose to plot star or not
         # Returns:
         #   intensity colormap of star
@@ -82,7 +82,7 @@ class LimbDarkening():
         #print(intensities)
         if plot == True:
             # Plot color grid of intensities at each location
-            plt.pcolor(x,y,intensities,shading='nearest')
+            plt.pcolor(x,y,intensities)#,shading='nearest')
             cbar = plt.colorbar()
             cbar.set_label('Surface Brightness',fontsize=14)
             plt.xlabel(r'x ($R_{star}$)',fontsize=14)
@@ -95,6 +95,8 @@ class LimbDarkening():
     
     # Place star at particular point in 
     def Transit(self,rad_planet,b,plot=False):
+        
+        self.b = b
         
         # Generate intensity-weighted coordinate grid
         x_grid,y_grid,intensities_star = self.Star(plot=False)
@@ -117,7 +119,7 @@ class LimbDarkening():
         for x in x_grid[0]:
             
             # Identify location of planet center
-            planet_center = [-x,b]
+            planet_center = [-x,self.b]
             
             # Calculate x,y, and total distances of all points from planet center
             xdist = x_grid - planet_center[0]
@@ -147,7 +149,7 @@ class LimbDarkening():
             # Plot star with planet in front if user desires
             if plot==True:
                 fig.clf()
-                ax.pcolor(x_grid,y_grid,intensities_star,cmap='hot',shading='nearest')
+                ax.pcolor(x_grid,y_grid,intensities_star,cmap='hot')#,shading='nearest')
                 ax.set_xlim(-1.2,1.2)
                 ax.set_ylim(-1.1,1.1)
                 ax.set_facecolor('black')
@@ -156,7 +158,7 @@ class LimbDarkening():
                 plt.close(fig)
             
             # Save important data
-            data[i] = self.star_temp, rad_planet, b, -x, light_fraction
+            data[i] = self.star_temp, rad_planet, self.b, -x, light_fraction
             
             # Reset intensities to original
             intensities_star[planet_ids] = non_transit_intensities    
@@ -167,7 +169,7 @@ class LimbDarkening():
             print("Time elapsed: {0:.3f}".format(looptime))"""
         
         # Save important data to text file (only has to be run once)
-        fileout = 'Transit_{0}Rstar_b={1}_{2}K.dat'.format(rad_planet,b,self.star_temp)
+        fileout = 'C:/Users/Jimmy/ASTR5490/HW3/TransitData/Transit_{0}Rstar_b={1}_{2}K.dat'.format(rad_planet,self.b,self.star_temp)
         np.savetxt(fileout, data, fmt = "%11.2f %11.2f %11.2f %11.9f %11.9f",comments='#',
                header="{:^10s}{:^11s}{:^11s}{:^11s}{:^11s}"\
                       .format('star_temp(K)','rad_planet(R*)', 'b', 'x_pos', 'rel_intens'))
@@ -177,8 +179,8 @@ class LimbDarkening():
         plt.xlabel(r'Horizontal Distance from Star Center ($R_{star}$)',fontsize=14)
         plt.ylabel('Relative Intensity',fontsize=14)
         plt.title('Transit of {0}'.format(rad_planet)+r'$R_{star}$ Planet'\
-                  +'\n'+r'($T_{star}$ = '+'{0}K, b = {1})'.format(self.star_temp,b),fontsize=18)
-        #plt.savefig('Transit_{0}Rstar_b={1}_{2}K.png'.format(rad_planet,b,self.star_temp))
+                  +'\n'+r'($T_{star}$ = '+'{0}K, b = {1})'.format(self.star_temp,self.b),fontsize=18)
+        #plt.savefig('Transit_{0}Rstar_b={1}_{2}K.png'.format(rad_planet,self.b,self.star_temp))
         
         # Determine how long it took the program to run
         runtime = time.time() - start_time
