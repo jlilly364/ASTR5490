@@ -78,11 +78,11 @@ class LimbDarkening():
         
         # Calculate intensity at each x,y pair
         intensities = self.QuadIntensity(x,y)
-
+        #print(np.asarray(intensities).shape)
         #print(intensities)
         if plot == True:
             # Plot color grid of intensities at each location
-            plt.pcolor(x,y,intensities)#,shading='nearest')
+            plt.pcolor(x,y,intensities,cmap='hot',shading='nearest')
             cbar = plt.colorbar()
             cbar.set_label('Surface Brightness',fontsize=14)
             plt.xlabel(r'x ($R_{star}$)',fontsize=14)
@@ -149,7 +149,7 @@ class LimbDarkening():
             # Plot star with planet in front if user desires
             if plot==True:
                 fig.clf()
-                ax.pcolor(x_grid,y_grid,intensities_star,cmap='hot')#,shading='nearest')
+                ax.pcolor(x_grid,y_grid,intensities_star,cmap='hot',shading='nearest')
                 ax.set_xlim(-1.2,1.2)
                 ax.set_ylim(-1.1,1.1)
                 ax.set_facecolor('black')
@@ -185,3 +185,39 @@ class LimbDarkening():
         # Determine how long it took the program to run
         runtime = time.time() - start_time
         print("My program took {0:.2f} seconds to run".format(runtime))
+    
+    # Function to generate rotational velocity at point in star
+    def RV(self,x,y,vel_eq=10.0):
+        
+        theta = np.sqrt((x**2+y**2)/(1.0-x**2-y**2))
+        theta_new = theta[~np.isnan(theta)]
+        phi = np.arctan(y/x)
+        #print(np.nanmin(phi),np.nanmax(phi))#,print(np.nanmax(phi)))
+        vel_rad = vel_eq*np.sin(np.arctan(theta))*np.cos(phi)
+        return(vel_rad)
+    
+    def RVProfile(self,plot=True):
+        # Generate intensity-weighted coordinate grid
+        x_grid,y_grid,intensities_star = self.Star(plot=False)
+        
+        # Calculate radial velocity at each position
+        velocities = self.RV(x_grid,y_grid)
+        vel_real = [x for x in velocities[~np.isnan(velocities)]]
+        print(vel_real)
+        #plt.hist(velocities[0])
+
+        #print(np.min(vel_real))
+        # Calculate velocity-weighted intensity profile
+        #numerator
+
+        if plot == True:
+            plt.pcolor(x_grid,y_grid,velocities,cmap='rainbow',shading='nearest')
+            plt.xlim(-1.2,1.2)
+            plt.ylim(-1.1,1.1)
+            plt.cbar = plt.colorbar()        
+        
+test = LimbDarkening(10000,50)
+#test.Star()
+test.RVProfile()
+        
+        
