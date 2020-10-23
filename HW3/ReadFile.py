@@ -10,9 +10,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Function to read simple text files
-def Read(filename,skip=1,unpack_bool=True):
+def Read(filename,unpack_bool=True):
     # Use numpy's loadtxt function to read columns of text file
-    col1, col2, col3 = np.loadtxt(filename,skiprows=skip,unpack=unpack_bool,usecols=[0,1,2])
+    data = np.genfromtxt(filename,delimiter=' ',names=True)
+    col1, col2, col3 = data['col0'],data['col1'],data['col2']
     return(col1,col2,col3)
-
-Read('test.dat')

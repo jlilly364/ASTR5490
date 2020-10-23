@@ -11,7 +11,7 @@ import numpy as np
 import matplotlib as plt
 
 Kepler33c = Periodicity('Kepler33.dat','Kepler 33c',None,period=13.17562)
-x,y,e = Kepler33c.LightCurve(xaxis='Phase')
+x,y,e = Kepler33c.LightCurve(xaxis='Time')
 
 
 """params = batman.TransitParams()       #object to store transit parameters
