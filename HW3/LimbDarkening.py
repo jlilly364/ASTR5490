@@ -186,37 +186,88 @@ class LimbDarkening():
         runtime = time.time() - start_time
         print("My program took {0:.2f} seconds to run".format(runtime))
     
-    # Function to generate rotational velocity at point in star
+    # Function to calculate rotational velocity at point in star
     def RV(self,x,y,vel_eq=10.0):
+        # Inputs:
+        #   x: array of x-positions (sourced from 'Star' function)
+        #   y: array of y-positions (sourced from 'Star' function)
+        #   vel_eq: equatorial velocity of rotating star
+        # Returns:
+        #   vel_rad: array of radial velocities for all pixels in star
         
+        # Set equatorial velocity as global variable
+        self.vel_eq = vel_eq
+        
+        # Calculate polar and azimuthal angles using cartesian pixel coords.
         theta = np.sqrt((x**2+y**2)/(1.0-x**2-y**2))
-        theta_new = theta[~np.isnan(theta)]
         phi = np.arctan(y/x)
-        #print(np.nanmin(phi),np.nanmax(phi))#,print(np.nanmax(phi)))
+
+        # Use angles and vel_eq to find radial velocity of each pixel
         vel_rad = vel_eq*np.sin(np.arctan(theta))*np.cos(phi)
+        
         return(vel_rad)
     
-    def RVProfile(self,plot=True):
+    # Function to generate rotational velocity profile of rotating star
+    def RVProfile(self,bins=100,plot='profile'):
+        # Inputs:
+        #   bins: number of bins for sorting pixel velocities
+        #   plot: string indicating what user want to plot
+        # Returns:
+        #   rotational velocity profile
         # Generate intensity-weighted coordinate grid
         x_grid,y_grid,intensities_star = self.Star(plot=False)
         
         # Calculate radial velocity at each position
         velocities = self.RV(x_grid,y_grid)
-        vel_real = [x for x in velocities[~np.isnan(velocities)]]
-        print(vel_real)
-        #plt.hist(velocities[0])
+        
+        # Consider velocities on left half of star to be negative
+        velocities[np.where(x_grid<0.0)]*=-1.0
 
-        #print(np.min(vel_real))
-        # Calculate velocity-weighted intensity profile
-        #numerator
-
-        if plot == True:
-            plt.pcolor(x_grid,y_grid,velocities,cmap='rainbow',shading='nearest')
+        # Decide what plot to make
+        if plot == 'star': # red-blue color coated map of star
+            plt.pcolor(x_grid,y_grid,velocities,cmap='bwr',shading='nearest',vmin=-self.vel_eq,vmax=self.vel_eq)
             plt.xlim(-1.2,1.2)
             plt.ylim(-1.1,1.1)
-            plt.cbar = plt.colorbar()        
+            plt.cbar = plt.colorbar()
+            
+        elif plot == 'profile': # rotational velocity profile (bin pix by vel)
+            # Generate array of velocities
+            rad_vels = np.linspace(-self.vel_eq,self.vel_eq,bins+1)
+            
+            # Establish list of num of pix in each bin
+            num_pixels = []
+            # Establish list of average velocity value in each bin
+            avg_RVs = []
+
+            # Loop over all actual pixel velocities to bin them
+            for i in range(bins):
+                # Find indices of pixels that fall within bin
+                indices = np.where((velocities>rad_vels[i]) & (velocities<rad_vels[i+1]))
+                
+                # Count number of pixels in bin and add count to array
+                count = np.sum(intensities_star[indices])
+                num_pixels.append(count)
+                
+                # Calculate average velocity in bin
+                avg_RV = (rad_vels[i]+rad_vels[i+1])/2.0
+                avg_RVs.append(avg_RV)
+            
+            #test = np.where(velocities<0.0)
+            #print(len(velocities[test]),len(velocities.flatten()))
+            #plt.hist(velocities.flatten(),bins=100)
+            
+            # Cast num_pixels and avg_RVs as numpy arrays
+            num_pixels = np.asarray(num_pixels)*-1
+            num_pixels += np.max(num_pixels)+1
+            avg_RVs = np.asarray(avg_RVs)
+            
+            # Flip num_pixels and normalize
+            #(num_pixels*-1)/np.max(num_pixels)
+                
+            plt.scatter(avg_RVs,num_pixels)
+                    
         
-test = LimbDarkening(10000,50)
+test = LimbDarkening(10000,500)
 #test.Star()
 test.RVProfile()
         
