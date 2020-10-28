@@ -65,7 +65,7 @@ class LimbDarkening():
         # Inputs:
         #   plot: boolean to choose to plot star or not
         # Returns:
-        #   intensity colormap of star
+        #   intensity colormap of star (if plot=True)
         #   grid of x and y coordinates & intensities at each coordinate
         
         # Set lower bounds and size of grid
@@ -78,29 +78,40 @@ class LimbDarkening():
         
         # Calculate intensity at each x,y pair
         intensities = self.QuadIntensity(x,y)
-        #print(np.asarray(intensities).shape)
-        #print(intensities)
+
+        # Plot color grid of intensities at each location
         if plot == True:
-            # Plot color grid of intensities at each location
             plt.pcolor(x,y,intensities,cmap='hot',shading='nearest')
             cbar = plt.colorbar()
             cbar.set_label('Surface Brightness',fontsize=14)
             plt.xlabel(r'x ($R_{star}$)',fontsize=14)
             plt.ylabel(r'y ($R_{star}$)',fontsize=14)
-            plt.title('Surface Brightness of T={0}K Star at '.format(self.star_temp)+r'$5000\AA$',fontsize=18)
+            plt.title('Surface Brightness of T={0}K Star \n (at '.format(self.star_temp)+r'$5000\AA$)',fontsize=18)
             plt.xlim(-1.2,1.2)
             plt.ylim(-1.1,1.1)
+            plt.tight_layout()
             
         return(x,y,intensities)
     
     # Place star at particular point in 
     def Transit(self,rad_planet,b,plot=False):
+        # Inputs:
+        #   rad_planet: fractional size of planet in terms of stellar radius
+        #   b: impact parameter of transit (ranges from 0 to 1)
+        #   plot: boolean to decide if visualiz. of transit is shown
+        # Returns:
+            
         
+        # Make impact parameter a global value
         self.b = b
         
         # Generate intensity-weighted coordinate grid
         x_grid,y_grid,intensities_star = self.Star(plot=False)
+        
+        # Flatten 2D intensity array and extrac non-NaN values
         real_intensities_star = [z for z in intensities_star.flatten() if ~np.isnan(z)]
+        
+        # Calculate total intensity of surface elements with no transit
         original_total = np.sum(real_intensities_star)
         
         # Make empty list of relative intensities
@@ -144,18 +155,18 @@ class LimbDarkening():
             light_curve.append(light_fraction)
             
             # Print status of loop
-            print("Now completing Loop {0} out of {1}: Rel. Intens. = {2:.2f}".format(i,len(x_grid[0]),light_fraction))
+            print("Now completing Loop {0} out of {1}: Rel. Intens. = {2:.5f}".format(i,len(x_grid[0]),light_fraction))
 
             # Plot star with planet in front if user desires
             if plot==True:
-                fig.clf()
+                #fig.clf()
                 ax.pcolor(x_grid,y_grid,intensities_star,cmap='hot',shading='nearest')
                 ax.set_xlim(-1.2,1.2)
                 ax.set_ylim(-1.1,1.1)
                 ax.set_facecolor('black')
                 #fig.savefig("C:/Users/Jimmy/Downloads/Test/test_{0}.png".format(i),)
                 fig.canvas.draw()
-                plt.close(fig)
+                #plt.close(fig)
             
             # Save important data
             data[i] = self.star_temp, rad_planet, self.b, -x, light_fraction
@@ -165,22 +176,22 @@ class LimbDarkening():
             i += 1
             
             # Determine how long program has been running
-            """looptime = time.time() - start_time
-            print("Time elapsed: {0:.3f}".format(looptime))"""
+            #looptime = time.time() - start_time
+            #print("Time elapsed: {0:.3f}".format(looptime))
         
-        # Save important data to text file (only has to be run once)
+        """# Save important data to text file (only has to be run once)
         fileout = 'C:/Users/Jimmy/ASTR5490/HW3/TransitData/Transit_{0}Rstar_b={1}_{2}K.dat'.format(rad_planet,self.b,self.star_temp)
         np.savetxt(fileout, data, fmt = "%11.2f %11.2f %11.2f %11.9f %11.9f",comments='#',
                header="{:^10s}{:^11s}{:^11s}{:^11s}{:^11s}"\
-                      .format('star_temp(K)','rad_planet(R*)', 'b', 'x_pos', 'rel_intens'))
+                      .format('star_temp(K)','rad_planet(R*)', 'b', 'x_pos', 'rel_intens'))"""
         
-        # Plot transit light curve
+        """# Plot transit light curve
         plt.scatter(x_grid[0],light_curve)
         plt.xlabel(r'Horizontal Distance from Star Center ($R_{star}$)',fontsize=14)
         plt.ylabel('Relative Intensity',fontsize=14)
         plt.title('Transit of {0}'.format(rad_planet)+r'$R_{star}$ Planet'\
                   +'\n'+r'($T_{star}$ = '+'{0}K, b = {1})'.format(self.star_temp,self.b),fontsize=18)
-        #plt.savefig('Transit_{0}Rstar_b={1}_{2}K.png'.format(rad_planet,self.b,self.star_temp))
+        #plt.savefig('Transit_{0}Rstar_b={1}_{2}K.png'.format(rad_planet,self.b,self.star_temp))"""
         
         # Determine how long it took the program to run
         runtime = time.time() - start_time
@@ -214,6 +225,7 @@ class LimbDarkening():
         #   plot: string indicating what user want to plot
         # Returns:
         #   rotational velocity profile
+        
         # Generate intensity-weighted coordinate grid
         x_grid,y_grid,intensities_star = self.Star(plot=False)
         
@@ -252,23 +264,23 @@ class LimbDarkening():
                 avg_RV = (rad_vels[i]+rad_vels[i+1])/2.0
                 avg_RVs.append(avg_RV)
             
-            #test = np.where(velocities<0.0)
-            #print(len(velocities[test]),len(velocities.flatten()))
-            #plt.hist(velocities.flatten(),bins=100)
-            
             # Cast num_pixels and avg_RVs as numpy arrays
             num_pixels = np.asarray(num_pixels)*-1
-            num_pixels += np.max(num_pixels)+1
             avg_RVs = np.asarray(avg_RVs)
             
-            # Flip num_pixels and normalize
-            #(num_pixels*-1)/np.max(num_pixels)
-                
-            plt.scatter(avg_RVs,num_pixels)
+            # Normalize values of num_pixels array
+            num_pixels -= np.min(num_pixels)
+            num_pixels /= np.max(num_pixels)
+            
+            # Plot normalized line profile ()
+            plt.plot(avg_RVs,num_pixels)
+            plt.xlabel(r'Radial Velocity ($\frac{km}{s}$)')
+            plt.ylabel('Normalized Line Profile')
+            plt.title('Line Profile of T={0}K Star \n (No Transit)'.format(self.star_temp))
                     
-        
-test = LimbDarkening(10000,500)
-#test.Star()
+# Tests of class and functions within the class
+test = LimbDarkening(5500,100)
+#test.Transit(0.5,0,plot=True)
 test.RVProfile()
         
         
