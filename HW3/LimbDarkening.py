@@ -277,10 +277,100 @@ class LimbDarkening():
             plt.xlabel(r'Radial Velocity ($\frac{km}{s}$)')
             plt.ylabel('Normalized Line Profile')
             plt.title('Line Profile of T={0}K Star \n (No Transit)'.format(self.star_temp))
+            
+    # Function to generate rotational velocity profile of rotating star
+    def RVProfileTransit(self,rad_planet=0.05,x_center=.5,b=0,bins=100,plot='profile'):
+        # Inputs:
+        #   rad_planet: fractional size of planet in terms of stellar radius
+        #   b: impact parameter of transit (can range from -1 to 1)
+        #   bins: number of bins for sorting pixel velocities
+        #         MUST BE <= gridsize
+        #   plot: string indicating what user want to plot
+        # Returns:
+        #   rotational velocity profile
+        
+        # Generate intensity-weighted coordinate grid
+        x_grid,y_grid,intensities_star = self.Star(plot=False)
+        
+        # Identify location of planet center
+        planet_center = [x_center,b]
+        
+        # Calculate x,y, and total distances of all points from planet center
+        xdist = x_grid - planet_center[0]
+        ydist = y_grid - planet_center[1]
+        dist = np.sqrt(xdist**2+ydist**2)
+        
+        # Find pixels within planet radius
+        planet_ids = np.where(dist < rad_planet)
+        
+        # Calculate radial velocity at each position
+        velocities = self.RV(x_grid,y_grid)
+        velocities_transit = np.copy(velocities)
+        
+        # Consider velocities on left half of star to be negative
+        velocities[np.where(x_grid<0.0)]*=-1.0
+        velocities_transit[np.where(x_grid<0.0)]*=-1.0
+        
+        # Set transit velocity to NaN wherever planet blocks the star        
+        velocities_transit[planet_ids] = np.NaN
+
+        # Decide what plot to make
+        if plot == 'star': # red-blue color coated map of star with no transit
+            #plt.pcolor(x_grid,y_grid,velocities,cmap='bwr',shading='nearest',vmin=-self.vel_eq,vmax=self.vel_eq)
+            plt.pcolor(x_grid,y_grid,velocities_transit,cmap='bwr',shading='nearest',vmin=-self.vel_eq,vmax=self.vel_eq)
+            plt.xlim(-1.2,1.2)
+            plt.ylim(-1.1,1.1)
+            plt.cbar = plt.colorbar()
+            
+        elif plot == 'profile': # rotational velocity profile (bin pix by vel)
+            # Generate array of velocities
+            rad_vels = np.linspace(-self.vel_eq,self.vel_eq,bins+1)
+            
+            # Establish list of num of pix in each bin
+            num_pixels = []
+            num_pixels_transit = []
+            
+            # Establish list of average velocity value in each bin
+            avg_RVs = []
+
+            # Loop over all actual pixel velocities to bin them
+            for i in range(bins):
+                # Find indices of pixels that fall within bin
+                indices = np.where((velocities>rad_vels[i]) & (velocities<rad_vels[i+1]))
+                indices_transit = np.where((velocities_transit>rad_vels[i]) & (velocities_transit<rad_vels[i+1]))
+                
+                # Count number of pixels in bin and add count to array
+                count = np.sum(intensities_star[indices])
+                count_transit = np.sum(intensities_star[indices_transit])
+                num_pixels.append(count)
+                num_pixels_transit.append(count_transit)
+                
+                # Calculate average velocity in bin
+                avg_RV = (rad_vels[i]+rad_vels[i+1])/2.0
+                avg_RVs.append(avg_RV)
+            
+            # Cast num_pixels and avg_RVs as numpy arrays
+            num_pixels = np.asarray(num_pixels)*-1
+            num_pixels_transit = np.asarray(num_pixels_transit)*-1
+            avg_RVs = np.asarray(avg_RVs)
+            
+            # Normalize values of num_pixels array
+            num_pixels -= np.min(num_pixels)
+            num_pixels /= np.max(num_pixels)
+            
+            num_pixels_transit -= np.min(num_pixels_transit)
+            num_pixels_transit /= np.max(num_pixels_transit)
+            
+            # Plot normalized line profiles
+            label=r'$R_{star}$'
+            plt.plot(avg_RVs,num_pixels,label='No Transit')
+            plt.plot(avg_RVs,num_pixels_transit,label='{0}'.format(rad_planet)+label+' Transiting at b={0}'.format(b))
+            plt.xlabel(r'Radial Velocity ($\frac{km}{s}$)')
+            plt.ylabel('Normalized Line Profile')
+            plt.title('Line Profile of T={0}K Star'.format(self.star_temp))
+            plt.legend()
                     
 # Tests of class and functions within the class
-test = LimbDarkening(5500,100)
-#test.Transit(0.5,0,plot=True)
-test.RVProfile()
-        
-        
+test = LimbDarkening(10000,100)
+#test.Transit(0.05,0.3,plot=True)
+test.RVProfileTransit(b=-0.5,plot='star')
