@@ -8,14 +8,12 @@ Created on Mon Oct  5 12:56:37 2020
 # Import relevant modules/packages
 import numpy as np
 import matplotlib.pyplot as plt
-from astropy import units as u
-from astropy import constants as const
 from astropy.timeseries import LombScargle
 from ReadFile import Read
 
 class Periodicity:
     
-    def __init__(self,filename,objectname,numPoints,contiguous=True,period=None):
+    def __init__(self,filename,objectname,numPoints=None,contiguous='True',period=None):
         # Inputs:
         #     filename: file path or file name (if file in same folder as notebook)
         #     objectname: name of object you're plotting curve of
@@ -33,12 +31,12 @@ class Periodicity:
         if self.numPoints == None:
             self.times = [time - self.times[0] for time in self.times]
         else:
-            if contiguous == True:
+            if contiguous == 'True':
                 # Select contiguous interval of points
                 self.times = [time - self.times[0] for time in self.times[:self.numPoints]]
                 self.fluxes = self.fluxes[:self.numPoints]
                 self.errors = self.errors[:self.numPoints]
-            else:
+            elif contiguous == 'Bookend':
                 # Select sparsed interval of data
                 self.times_i = [time - self.times[0] for time in self.times[:self.numPoints]]
                 self.times_f = [time - self.times[0] for time in self.times[-self.numPoints:]]
@@ -53,6 +51,18 @@ class Periodicity:
                 self.errors_i = self.errors[:self.numPoints]
                 self.errors_f = self.errors[-self.numPoints:]
                 self.errors = [*self.errors_i,*self.errors_f]
+            elif contiguous == 'Random':
+                # Generate random list of indices
+                randoms = np.random.randint(0, high=len(self.times), size=numPoints)
+                #print(randoms)
+                # Select random sparsed interval of data
+                self.times = self.times[randoms]
+                
+                # Concatenate first and last n elements of flux list
+                self.fluxes = self.fluxes[randoms]
+                
+                # Concatenate first and last n elements of error list
+                self.errors = self.errors[randoms]
 
     # Function for plotting light curves from text file
     def LightCurve(self,plot=True,xaxis='Time',curve='Flux'):
@@ -92,6 +102,8 @@ class Periodicity:
                 ax.scatter(phases,self.fluxes,label='Period = {0:.3f} days'.format(self.period))
     
                 xdata = phases
+                ax.set_ylim(0.999,1.0006)
+                ax.set_xlim(0.0,0.2)
     
             # Add plot features
             ax.set_xlabel(xlabel,fontsize=14)
@@ -108,7 +120,6 @@ class Periodicity:
                 xdata = phases
         
         return(xdata,self.fluxes,self.errors)
-
 
     # Function to generate power spectrum from a flux vs. time dataset
     def LS(self,minP,maxP,numIntervals,i,flux,plot=False,trueP=None):

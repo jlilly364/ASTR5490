@@ -240,7 +240,11 @@ class LimbDarkening():
             plt.pcolor(x_grid,y_grid,velocities,cmap='bwr',shading='nearest',vmin=-self.vel_eq,vmax=self.vel_eq)
             plt.xlim(-1.2,1.2)
             plt.ylim(-1.1,1.1)
-            plt.cbar = plt.colorbar()
+            cbar = plt.colorbar()
+            cbar.set_label(r'Radial Velocity ($\frac{km}{s}$)',fontsize=14)
+            plt.xlabel(r'x ($R_{star}$)',fontsize=14)
+            plt.ylabel(r'y ($R_{star}$)',fontsize=14)
+            plt.title('Velocity of T={0}K Star \n (at '.format(self.star_temp)+r'$5000\AA$)',fontsize=18)
             
         elif plot == 'profile': # rotational velocity profile (bin pix by vel)
             # Generate array of velocities
@@ -279,7 +283,7 @@ class LimbDarkening():
             plt.title('Line Profile of T={0}K Star \n (No Transit)'.format(self.star_temp))
             
     # Function to generate rotational velocity profile of rotating star
-    def RVProfileTransit(self,rad_planet=0.05,x_center=.5,b=0,bins=100,plot='profile'):
+    def RVProfileTransit(self,rad_planet=0.05,x_center=.5,b=0.5,bins=100,plot='profile'):
         # Inputs:
         #   rad_planet: fractional size of planet in terms of stellar radius
         #   b: impact parameter of transit (can range from -1 to 1)
@@ -320,7 +324,11 @@ class LimbDarkening():
             plt.pcolor(x_grid,y_grid,velocities_transit,cmap='bwr',shading='nearest',vmin=-self.vel_eq,vmax=self.vel_eq)
             plt.xlim(-1.2,1.2)
             plt.ylim(-1.1,1.1)
-            plt.cbar = plt.colorbar()
+            cbar = plt.colorbar()
+            cbar.set_label(r'Radial Velocity ($\frac{km}{s}$)',fontsize=14)
+            plt.xlabel(r'x ($R_{star}$)',fontsize=14)
+            plt.ylabel(r'y ($R_{star}$)',fontsize=14)
+            plt.title('Velocity of T={0}K Star \n (at '.format(self.star_temp)+r'$5000\AA$)',fontsize=18)
             
         elif plot == 'profile': # rotational velocity profile (bin pix by vel)
             # Generate array of velocities
@@ -367,10 +375,5 @@ class LimbDarkening():
             plt.plot(avg_RVs,num_pixels_transit,label='{0}'.format(rad_planet)+label+' Transiting at b={0}'.format(b))
             plt.xlabel(r'Radial Velocity ($\frac{km}{s}$)')
             plt.ylabel('Normalized Line Profile')
-            plt.title('Line Profile of T={0}K Star'.format(self.star_temp))
+            plt.title('Line Profile of T={0}K Star \n '.format(self.star_temp)+r'($x_{cen}=$'+str(x_center)+r' $R_{star}$)')
             plt.legend()
-                    
-# Tests of class and functions within the class
-test = LimbDarkening(10000,100)
-#test.Transit(0.05,0.3,plot=True)
-test.RVProfileTransit(b=-0.5,plot='star')
