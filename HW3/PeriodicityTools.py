@@ -13,7 +13,7 @@ from ReadFile import Read
 
 class Periodicity:
     
-    def __init__(self,filename,objectname,numPoints=None,contiguous='True',period=None):
+    def __init__(self,filename,objectname,colNames,numPoints=None,contiguous='True',period=None):
         # Inputs:
         #     filename: file path or file name (if file in same folder as notebook)
         #     objectname: name of object you're plotting curve of
@@ -25,7 +25,7 @@ class Periodicity:
         self.period = period
         
         # Extract time, flux, and error data from text file
-        self.times,self.fluxes,self.errors = Read(self.file,['JD','RV','Error','Observatory'])
+        self.times,self.fluxes,self.errors = Read(self.file,colNames)
 
         # Decide what times array to make
         if self.numPoints == None:

@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 # Function to read simple text files
 def Read(filename,col_names,unpack_bool=True):
     # Use numpy's loadtxt function to read columns of text file
-    data = np.genfromtxt(filename,delimiter='\t',names=True)
+    data = np.genfromtxt(filename,delimiter=' ',names=True)
     col1, col2, col3 = data[col_names[0]],data[col_names[1]],data[col_names[2]]
     return(col1,col2,col3)
 

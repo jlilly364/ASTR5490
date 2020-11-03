@@ -23,14 +23,14 @@ class LimbDarkening():
         #   a: first parameter in quadratic limb darkening equation
         #   b: second parameter in quadratic limb darkening equation
         if self.star_temp == 5500:
-            self.a = 633.27/1000
-            self.b = 159.56/1000
+            self.u1 = 633.27/1000
+            self.u2 = 159.56/1000
         elif self.star_temp == 10000:
-            self.a = .2481
-            self.b = .2739
+            self.u1 = .2481
+            self.u2 = .2739
         elif self.star_temp == 3600:
-            self.a = .626
-            self.b = .226
+            self.u1 = .626
+            self.u2 = .226
         
     # Function to calculate quadratic limb darkening profile
     def QuadIntensity(self,x,y):
@@ -49,8 +49,8 @@ class LimbDarkening():
         # Calculate mu and terms that use mu
         mu = np.sqrt(1-abs(r**2/R_star**2))
     
-        first_term = self.a*(1.0-mu)
-        second_term = self.b*(1.0-mu)**2
+        first_term = self.u1*(1.0-mu)
+        second_term = self.u2*(1.0-mu)**2
         
         # Calculate intensity at r
         intensity = 1.0*(1-first_term-second_term)
@@ -101,23 +101,14 @@ class LimbDarkening():
         # Figure out time code started to be used
         start_time = time.time()
         
-        # Make impact parameter a global value
-        self.b = b
-        
         # Generate intensity-weighted coordinate grid
         x_grid,y_grid,intensities_star = self.Star(plot=False)
         
-        # Flatten 2D intensity array and extrac non-NaN values
-        real_intensities_star = [z for z in intensities_star.flatten() if ~np.isnan(z)]
-        
         # Calculate total intensity of surface elements with no transit
-        original_total = np.sum(real_intensities_star)
+        original_total = np.nansum(intensities_star)
         
         # Make empty list of relative intensities
         light_curve = []
-        
-        # Initialize figure and axis object for plotting
-        fig, ax = plt.subplots()
         
         # Set loop counter
         i=0
@@ -129,7 +120,7 @@ class LimbDarkening():
         for x in x_grid[0]:
             
             # Identify location of planet center
-            planet_center = [-x,self.b]
+            planet_center = [-x,b]
             
             # Calculate x,y, and total distances of all points from planet center
             xdist = x_grid - planet_center[0]
@@ -147,8 +138,8 @@ class LimbDarkening():
             real_intensities_transit = [z for z in intensities_star.flatten() if ~np.isnan(z)]
             
             # Calculate total observed intensity at this point in transit
-            transit_total = np.sum(real_intensities_transit)
-            
+            transit_total = np.nansum(intensities_star)
+
             # Calculate relative intensity to non-transit
             light_fraction = transit_total/original_total
             light_curve.append(light_fraction)
@@ -158,25 +149,32 @@ class LimbDarkening():
 
             # Plot star with planet in front if user desires
             if plot==True:
-                #fig.clf()
+                # Initialize figure and axis object for plotting
+                fig, ax = plt.subplots()
+                
+                # Plot star
                 ax.pcolor(x_grid,y_grid,intensities_star,cmap='hot',shading='nearest')
                 ax.set_xlim(-1.2,1.2)
                 ax.set_ylim(-1.1,1.1)
                 ax.set_facecolor('black')
-                cbar = plt.colorbar()
-                cbar.set_label('Surface Brightness',fontsize=14)
+                #cbar = plt.colorbar(ax)
+                #cbar.set_label('Surface Brightness',fontsize=14)
                 ax.set_xlabel(r'x ($R_{star}$)',fontsize=14)
                 ax.set_ylabel(r'y ($R_{star}$)',fontsize=14)
                 ax.set_title('Surface Brightness of T={0}K Star \n (at '.format(self.star_temp)+r'$5000\AA$)',fontsize=18)
                 #fig.savefig("C:/Users/Jimmy/Downloads/Test/test_{0}.png".format(i),)
+                plt.pause(0.05)
+                
+                plt.tight_layout()
                 #fig.canvas.draw()
-                #plt.close(fig)
+            plt.show()
             
             # Save important data
-            data[i] = self.star_temp, rad_planet, self.b, -x, light_fraction
+            data[i] = self.star_temp, rad_planet, b, -x, light_fraction
             
             # Reset intensities to original
-            intensities_star[planet_ids] = non_transit_intensities    
+            intensities_star[planet_ids] = non_transit_intensities
+            #print(np.nansum(non_transit_intensities) - np.nansum(intensities_star[planet_ids]))
             i += 1
             
             # Determine how long program has been running
@@ -190,11 +188,11 @@ class LimbDarkening():
                       .format('star_temp(K)','rad_planet(R*)', 'b', 'x_pos', 'rel_intens'))"""
         
         # Plot transit light curve
-        ax.scatter(x_grid[0],light_curve)
-        ax.set_xlabel(r'Horizontal Distance from Star Center ($R_{star}$)',fontsize=14)
-        ax.set_ylabel('Relative Intensity',fontsize=14)
-        ax.set_title('Transit of {0}'.format(rad_planet)+r'$R_{star}$ Planet'\
-                  +'\n'+r'($T_{star}$ = '+'{0}K, b = {1})'.format(self.star_temp,self.b),fontsize=18)
+        plt.scatter(x_grid[0],light_curve)
+        plt.xlabel(r'Horizontal Distance from Star Center ($R_{star}$)',fontsize=14)
+        plt.ylabel('Relative Intensity',fontsize=14)
+        plt.title('Transit of {0}'.format(rad_planet)+r'$R_{star}$ Planet'\
+                  +'\n'+r'($T_{star}$ = '+'{0}K, b = {1})'.format(self.star_temp,b),fontsize=18)
         #plt.savefig('Transit_{0}Rstar_b={1}_{2}K.png'.format(rad_planet,self.b,self.star_temp))
         
         # Determine how long it took the program to run
@@ -381,3 +379,9 @@ class LimbDarkening():
             plt.ylabel('Normalized Line Profile')
             plt.title('Line Profile of T={0}K Star \n '.format(self.star_temp)+r'($x_{cen}=$'+str(x_center)+r' $R_{star}$)')
             plt.legend()
+"""
+# Lines to test class    
+star_b = LimbDarkening(5500,100)
+#star_b.Star()
+star_b.Transit(0.05,0.9,False)
+"""

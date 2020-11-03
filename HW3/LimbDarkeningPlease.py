@@ -13,14 +13,25 @@ start_time = time.time()
 # Class to generate intensity-weighted stellar profile
 class LimbDarkening():
     
-    def __init__(self,a,b,gridsize):
+    def __init__(self,star_temp,gridsize):
         # Inputs:
+        #   star_temp: surface temperature of star
+        #   gridsize: length and width of grid of points
+        
+        self.star_temp=star_temp
+        self.gridsize = gridsize
+        
         #   a: first parameter in quadratic limb darkening equation
         #   b: second parameter in quadratic limb darkening equation
-        #   gridsize: length and width of grid of points
-        self.a = a
-        self.b = b
-        self.gridsize = gridsize
+        if self.star_temp == 5500:
+            self.a = 633.27/1000
+            self.b = 159.56/1000
+        elif self.star_temp == 10000:
+            self.a = .2481
+            self.b = .2739
+        elif self.star_temp == 3600:
+            self.a = .626
+            self.b = .226
         
     # Function to calculate quadratic limb darkening profile
     def QuadIntensity(self,x,y):
@@ -154,5 +165,5 @@ class LimbDarkening():
         runtime = time.time() - start_time
         print("My program took {0:.3f} seconds to run".format(runtime))
 
-star = LimbDarkening(633.27/1000,159.56/1000,50)
+star = LimbDarkening(5500,50)
 star.Transit(0.05,0.9,False)
