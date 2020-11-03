@@ -25,7 +25,7 @@ class Periodicity:
         self.period = period
         
         # Extract time, flux, and error data from text file
-        self.times,self.fluxes,self.errors = Read(self.file)
+        self.times,self.fluxes,self.errors = Read(self.file,['JD','RV','Error','Observatory'])
 
         # Decide what times array to make
         if self.numPoints == None:
@@ -191,10 +191,10 @@ class Periodicity:
             noise = np.random.normal(meanErr,stddevErr,length)
     
             # Add noise to RV measurements
-            newRVs = np.add(self.fluxes,noise)
+            #newRVs = np.add(self.fluxes,noise)
     
             # Calculate maximum power in the Lomb-Scargle periodogram
-            maxPower = self.LS(35,45,1000,1,flux=newRVs)
+            maxPower = self.LS(35,45,1000,1,flux=noise)
             maxPowers.append(maxPower)
     
             # Check if maximum power exceeds that of period in non-noisy data

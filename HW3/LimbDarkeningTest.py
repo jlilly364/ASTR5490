@@ -9,6 +9,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 
+# Figure out time code started to be used
+start_time = time.time()
+
 # Class to generate intensity-weighted stellar profile
 class LimbDarkening():
     
@@ -98,8 +101,6 @@ class LimbDarkening():
         #   plot: boolean to decide if visualiz. of transit is shown
         # Returns:
             
-        # Figure out time code started to be used
-        start_time = time.time()
         
         # Make impact parameter a global value
         self.b = b
@@ -151,10 +152,12 @@ class LimbDarkening():
             
             # Calculate relative intensity to non-transit
             light_fraction = transit_total/original_total
+            if light_fraction > 1.0:
+                light_fraction = 1.0
             light_curve.append(light_fraction)
             
             # Print status of loop
-            #print("Now completing Loop {0} out of {1}: Rel. Intens. = {2:.5f}".format(i,len(x_grid[0]),light_fraction))
+            print("Loop {0} out of {1}: x = {2:.3f}; Rel. Intens. = {3:.5f}".format(i,len(x_grid[0]),x,light_fraction))
 
             # Plot star with planet in front if user desires
             if plot==True:
@@ -163,11 +166,6 @@ class LimbDarkening():
                 ax.set_xlim(-1.2,1.2)
                 ax.set_ylim(-1.1,1.1)
                 ax.set_facecolor('black')
-                cbar = plt.colorbar()
-                cbar.set_label('Surface Brightness',fontsize=14)
-                ax.set_xlabel(r'x ($R_{star}$)',fontsize=14)
-                ax.set_ylabel(r'y ($R_{star}$)',fontsize=14)
-                ax.set_title('Surface Brightness of T={0}K Star \n (at '.format(self.star_temp)+r'$5000\AA$)',fontsize=18)
                 #fig.savefig("C:/Users/Jimmy/Downloads/Test/test_{0}.png".format(i),)
                 #fig.canvas.draw()
                 #plt.close(fig)
@@ -190,18 +188,18 @@ class LimbDarkening():
                       .format('star_temp(K)','rad_planet(R*)', 'b', 'x_pos', 'rel_intens'))"""
         
         # Plot transit light curve
-        ax.scatter(x_grid[0],light_curve)
-        ax.set_xlabel(r'Horizontal Distance from Star Center ($R_{star}$)',fontsize=14)
-        ax.set_ylabel('Relative Intensity',fontsize=14)
-        ax.set_title('Transit of {0}'.format(rad_planet)+r'$R_{star}$ Planet'\
+        plt.scatter(x_grid[0],light_curve)
+        plt.xlabel(r'Horizontal Distance from Star Center ($R_{star}$)',fontsize=14)
+        plt.ylabel('Relative Intensity',fontsize=14)
+        plt.title('Transit of {0}'.format(rad_planet)+r'$R_{star}$ Planet'\
                   +'\n'+r'($T_{star}$ = '+'{0}K, b = {1})'.format(self.star_temp,self.b),fontsize=18)
-        #plt.savefig('Transit_{0}Rstar_b={1}_{2}K.png'.format(rad_planet,self.b,self.star_temp))
+        #plt.savefig('Transit_{0}Rstar_b={1}_{2}K.png'.format(rad_planet,self.b,self.star_temp))"""
         
         # Determine how long it took the program to run
         runtime = time.time() - start_time
-        print("My program took {0:.2f} minutes to run".format(runtime/60.0))
+        print("My program took {0:.2f} seconds to run".format(runtime))
     
-    # Function to calculate rotational velocity at point in star
+    """# Function to calculate rotational velocity at point in star
     def RV(self,x,y,vel_eq=10.0):
         # Inputs:
         #   x: array of x-positions (sourced from 'Star' function)
@@ -380,4 +378,7 @@ class LimbDarkening():
             plt.xlabel(r'Radial Velocity ($\frac{km}{s}$)')
             plt.ylabel('Normalized Line Profile')
             plt.title('Line Profile of T={0}K Star \n '.format(self.star_temp)+r'($x_{cen}=$'+str(x_center)+r' $R_{star}$)')
-            plt.legend()
+            plt.legend()"""
+            
+star_b = LimbDarkening(5500,100)
+star_b.Transit(0.05,0.9,False)
