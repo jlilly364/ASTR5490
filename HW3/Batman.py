@@ -9,7 +9,7 @@ import batman
 import numpy as np
 import matplotlib.pyplot as plt
 
-def BatmanModel(t0=0.0,P=1.0,rad_pl=0.1,a=15.0,i=87.0,e=0.0,w=90.0,coeff=[0.5,0.1],plot=False):
+def BatmanModel(t0=0.0,P=1.0,rad_pl=0.01602,a=15.0,i=87.0,e=0.0,w=90.0,coeff=[0.5,0.1],plot=False):
     
     # Initialize the model
     params = batman.TransitParams()       #object to store transit parameters
@@ -34,5 +34,5 @@ def BatmanModel(t0=0.0,P=1.0,rad_pl=0.1,a=15.0,i=87.0,e=0.0,w=90.0,coeff=[0.5,0.
         ax.get_yaxis().get_major_formatter().set_useOffset(False)
         ax.plot(t_new,flux)
 
-    return (t_new,flux)
+    return (t_new,flux,rad_pl)
 #BatmanModel()
