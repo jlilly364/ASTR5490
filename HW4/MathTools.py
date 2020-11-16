@@ -123,7 +123,7 @@ def NonRelDoppler(new_value,rest=5000.0):
     return(velocity)
 
 # Trapezoidal integration function
-def TrapIntegrate(f,a,b,N=100):
+def TrapIntegrate(f,a,b,N=500):
     # Inputs:
     #   a: lower bound
     #   b: upper bound
