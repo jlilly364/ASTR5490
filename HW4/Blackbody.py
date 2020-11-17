@@ -15,7 +15,7 @@ import time
 # Class to generate and analze spectral energy distributions (SEDs)
 class SED:
     
-    def __init__(self,xvariable,yvariable,Teff=5780,lambda_min=10**-10,lambda_max=10**-4,N=10**5):
+    def __init__(self,xvariable,yvariable,Teff=5780,lambda_min=10**-10,lambda_max=10**-4,N=2*10**5):
         # Inputs:
         #   xvariable: 'freq' or 'wavelen' to determine which Planck form to use
         #   yvariable: 'planck' or 'luminosity' or 'xvar_lumin'
@@ -190,7 +190,7 @@ class SED:
             # Axes labels and titles
             plt.xlabel(self.xlabel,fontsize=14)
             plt.ylabel(self.ylabel.format(y.unit),fontsize=14)
-            plt.title(r'Spectral Energy Distribution for $T_{eff}=$%dK Star'%self.Teff.value,fontsize=18)
+            plt.title(r'Spectral Energy Distribution for $T_{eff}=$%dK BB'%self.Teff.value,fontsize=18)
             plt.tight_layout()
         
         # Tell user how long function took to run

@@ -149,3 +149,22 @@ def TrapIntegrate(f,a,b,N=500):
     print('Integral = {0}'.format(s*h))
     return(s*h)
 
+# Function to calculate radiative equilibrium tempertature
+def EquilTemp(albedo,Rstar,dist,Teff):
+    # Inputs:
+    #   albedo: albedo of body of interest (usually planet)
+    #   Rstar: radius of host star (in Rsun)
+    #   dist: distance of body of interest from host star (usually SMA in au)
+    #   Teff: effective temperature of host star (in K)
+    # Returns:
+    #   Teq: radiative equilibrium temperature of body of interest
+    
+    # Convert Rstar and dist to same units (m)
+    Rstar = Rstar.to(u.m).value
+    dist = dist.to(u.m).value
+    
+    # Calculate radiative equilibrium temperature
+    Teq = (((1-albedo)*Rstar**2)/(4*dist**2))**(1/4)*Teff
+    print("Body Temperature = {0:.2f} K".format(Teq))
+    return(Teq)
+
