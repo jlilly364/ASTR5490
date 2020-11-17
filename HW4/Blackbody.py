@@ -15,44 +15,99 @@ import time
 # Class to generate and analze spectral energy distributions (SEDs)
 class SED:
     
-    def __init__(self,Teff=5780,lambda_min=10**-10,lambda_max=10**-4,N=10**5):
+    def __init__(self,xvariable,Teff=5780,lambda_min=10**-10,lambda_max=10**-4,N=2*10**5):
         # Inputs:
+        #   xvariable: 'freq' or 'wavelen' to determine which Planck form to use
+        #   yvariable: 'Planck' or 'integrated'
         #   T_eff: effective temperature of blackbody (in K)
         #   lambda_min: minimum wavelength to calc. Planck function over (in m)
         #   lambda_max: minimum wavelength to calc. Planck function over (in m)
         #   Number of subintervals to integrate over    
     
+        # Cast initial parameters as global variables
+        self.xvariable = xvariable
         self.Teff = Teff*u.K
         self.lambda_min = lambda_min*u.m
         self.lambda_max = lambda_max*u.m
         self.N = N
         
+        # Calculate wavelength at which blackbody peaks (in m)
+        self.lambda_peak = ((2.90*(10**3)*u.micron*u.K)/self.Teff).to(u.m)
+        
+        # Set boundaries of analysis depending on x variable
+        if self.xvariable == 'wavelen':
+            self.x_min = self.lambda_min
+            self.x_max = self.lambda_max
+            
+            # Calculate wavelength at which blackbody peaks (in m)
+            self.y_peak = self.lambda_peak
+            
+            # Define x-axis label
+            self.xlabel = r'$\lambda$ ({0:latex_inline})'.format(self.x_min.unit)
+            
+            # Define v-line labels
+            self.vlabel = r'Analytical: $\lambda_{{max}}={0:.2e}$ {1:latex_inline}'.format(self.y_peak.value,self.y_peak.unit)
+            self.num_vlabel = r'Numerical: $\lambda_{{max}}={0:.2e}$ {1:latex_inline}'
+        
+        elif self.xvariable == 'freq':
+            # Convert wavelength range to frequency range
+            self.x_min = self.lambda_min.to(u.s**(-1), equivalencies=u.spectral())
+            self.x_max = self.lambda_max.to(u.s**(-1), equivalencies=u.spectral())
+            
+            # Calculate frequency at which blackbody peaks (in s^-1)
+            self.y_peak = (5.88*(10**10)*(u.s**(-1))/u.K)*self.Teff
+            
+            # Define x-axis label
+            self.xlabel = r'$\nu$ ({0:latex_inline})'.format(self.x_min.unit)
+            
+            # Define v-line labels
+            self.vlabel = r'Analytical: $\nu_{{max}}={0:.2e}$ {1:latex_inline}'.format(self.y_peak.value,self.y_peak.unit)
+            self.num_vlabel = r'Numerical: $\nu_{{max}}={0:.2e}$ {1:latex_inline}'
+        
         # Calculate surface area of sun for later use
         self.sun_SA = 4*np.pi*const.R_sun**2
     
     # Function to calculate main part Planck function at given wavelength
-    def Planck(self,wavelength,units=False):
+    def Planck(self,x,units=True):
         # Inputs:
-        #   wavelength: wavelength to calculate Plank function at
+        #   x: value of x-variable to calculate Planck function at
         #   units: boolean to decide if quantities should have units
         #           (no units is preferable if using func. to integrate)
         # Returns:
         #   B: value of Planck function at that wavelength
         
-        # Calculate 2hc^2 (prefactor in Planck's function)
-        prefactor = (2*const.h*const.c**2)
+        if self.xvariable == 'wavelen':
+            # Calculate 2hc^2 (prefactor in Planck's function)
+            prefactor = (2*const.h*const.c**2)
+            
+            # Calculate hc/kT (constant in exponential of Planck's function)
+            exp_factor = (const.h*const.c/(const.k_B*self.Teff))
+            
+            if units == False:
+                # Calculate value of Planck function at this wavelength
+                B = prefactor.value*x.value**(-5)/(np.exp(exp_factor.value/x.value)-1)
+            else:
+                B = prefactor*x**(-5)/(np.exp(exp_factor/x)-1)
+            
+            # Leave or flip sign of luminosity when integrating later
+            self.multiplier = 1.0
         
-        # Calculate hc/kT (constant in exponential of Planck's function)
-        exp_factor = (const.h*const.c/(const.k_B*self.Teff))
+        elif self.xvariable == 'freq':
+            
+            # Calculate 2h/c^2 (prefactor in Planck's function)
+            prefactor = 2*const.h/const.c**2
+            
+            # Calculate h/kT (constant in exponential of Planck's function)
+            exp_factor = const.h/(const.k_B*self.Teff)
         
-        # Print units of B(lambda)
-        #print((prefactor*wavelength**(-5)).unit)
-        
-        if units == False:
-            # Calculate value of Planck function at this wavelength
-            B = prefactor.value*wavelength.value**(-5)/(np.exp(exp_factor.value/wavelength.value)-1)
-        else:
-            B = prefactor*wavelength**(-5)/(np.exp(exp_factor/wavelength)-1)
+            if units == False:
+                # Calculate value of Planck function at this wavelength
+                B = prefactor.value*x.value**3/(np.exp(exp_factor.value*x.value)-1)
+            else:
+                B = prefactor*x**3/(np.exp(exp_factor*x)-1)
+                
+            # Leave or flip sign of luminosity when integrating later
+            self.multiplier = -1.0
             
         return(B)
     
@@ -68,18 +123,14 @@ class SED:
         start_time = time.time()
         
         # Define list of wavelengths
-        x = np.linspace(self.lambda_min,self.lambda_max,self.N)
+        x = np.linspace(self.x_min,self.x_max,self.N)
         
         # Calculate Planck function at each wavelength
         y = self.Planck(x,units=True)
-
-        # Calculate wavelength at which blackbody peaks
-        lambda_peak = (2.89*(10**3)*u.micron*u.K)/self.Teff
-        lambda_peak = lambda_peak.to(u.m).value
     
         # Find where blackbody peaks from my calculations
         peak_loc = np.argmax(y)
-        lambda_max = x[peak_loc]
+        numerical_max = x[peak_loc]
         
         # Decide whether to plot SED or not
         if plot == True:
@@ -92,29 +143,29 @@ class SED:
             plt.xscale('log')
             
             # Plot analytical and numerical wavelength peaks
-            plt.vlines(lambda_peak,min(y).value,max(y).value,colors='red',\
-                       linestyles='dashed',label=r"(Analytical) $\lambda_{peak}=%.2e m$"%lambda_peak)
-            plt.vlines(lambda_max.value,min(y).value,max(y).value,colors='red',\
-                       linestyles='dashed',label=r'(Numerical) $\lambda_{max}=%.2e m$'%lambda_max.value)
+            plt.vlines(self.y_peak.value,min(y).value,max(y).value,colors='red',\
+                       linestyles='dashed',label=self.vlabel)
+            plt.vlines(numerical_max.value,min(y).value,max(y).value,colors='red',\
+                       linestyles='dashed',label=self.num_vlabel.format(numerical_max.value,numerical_max.unit))
             plt.legend()
             
             # Axes labels and titles
-            plt.xlabel('Wavelength ({0:latex_inline})'.format(x.unit),fontsize=14)
-            plt.ylabel('Spectral Radiance ({0:latex_inline})'.format(y.unit),fontsize=14)
+            plt.xlabel(self.xlabel,fontsize=14)
+            plt.ylabel(r'Spectral Radiance per $\Omega$ ({0:latex_inline})'.format(y.unit),fontsize=14)
             plt.title(r'Spectral Energy Distribution for $T_{eff}=$%dK Star'%self.Teff.value,fontsize=18)
             plt.tight_layout()
         
         # Calculate stellar luminosity (np.trapz integrates Planck func.)
-        luminosity = np.pi*self.sun_SA*np.trapz(y,x)
+        luminosity = np.pi*self.sun_SA*np.trapz(y,x)*self.multiplier
         print("Luminosity = {0:.3f} Lsun".format(luminosity.to(u.erg/u.s)/const.L_sun.to(u.erg/u.s)))
         
         # Calculate fraction of luminosity from below peak wavelength
-        lumin_before = np.pi*self.sun_SA*np.trapz(y[:peak_loc],x[:peak_loc])
+        lumin_before = np.pi*self.sun_SA*np.trapz(y[:peak_loc],x[:peak_loc])*self.multiplier
         frac_before = lumin_before/luminosity*100
         print("{0:.2f}% of energy emitted below peak".format(frac_before))
         
         # Calculate fraction of luminosity from peak wavelength and beyond
-        lumin_after = np.pi*self.sun_SA*np.trapz(y[peak_loc:],x[peak_loc:])
+        lumin_after = np.pi*self.sun_SA*np.trapz(y[peak_loc:],x[peak_loc:])*self.multiplier
         frac_after = lumin_after/luminosity*100
         print("{:.2f}% of energy emitted above peak \n".format(frac_after))
         
@@ -123,6 +174,6 @@ class SED:
         
         return(luminosity)
 
-test = SED()
+"""test = SED('wavelen')
 #test.Planck(10**-6*u.m,units=False)
-test.SEDStar(False)
+test.SEDStar(True)"""
