@@ -144,11 +144,11 @@ class SED:
         if self.yvariable == 'luminosity':
             # Convert Planck function to luminosity
             y *= np.pi*self.sun_SA
-            y = np.multiply(x,y)
+            #y = np.multiply(x,y)
         elif self.yvariable == 'xvar_luminos':
             # Convert Planck function to luminosity*xvariable (planck * x**2)
             y *= np.pi*self.sun_SA
-            y = np.multiply(np.square(x),y)
+            y = np.multiply(x,y)
             
         # Find where blackbody peaks from my calculations
         peak_loc = np.argmax(y)

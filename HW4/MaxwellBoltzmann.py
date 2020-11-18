@@ -68,7 +68,7 @@ class MaxwellBoltzmann:
         
         return(speeds,prob_densities)
         
-test = MaxwellBoltzmann(4,273)
+"""test = MaxwellBoltzmann(4,273)
 #test.MB(1000)
-test.MBDistribution()
+test.MBDistribution()"""
         
