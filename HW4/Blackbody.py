@@ -9,7 +9,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from astropy import units as u
 from astropy import constants as const
-from scipy.integrate import quad
 import time
 
 # Class to generate and analze spectral energy distributions (SEDs)
