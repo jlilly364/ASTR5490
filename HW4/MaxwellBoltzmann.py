@@ -73,12 +73,9 @@ class MaxwellBoltzmann:
         plt.plot(speeds,prob_densities,label='T={0}'.format(self.temp))
         plt.xlabel(r'$v\:(m\,s^{-1})$')
         plt.ylabel('Probability Density ({0:latex_inline})'.format(prob_densities.unit))
-        plt.title('Maxwell-Boltzmann Distribution for {0}'.format(self.chemical))
+        plt.title('Maxwell-Boltzmann Distribution for {0} on {1}'.format(self.chemical,planet))
         plt.tight_layout()
         plt.legend()
-        
-        # Tell user how long function took to run
-        print('Program took %.2f sec to run'%(time.time()-start_time))
         
         # Choose which v_esc to use
         if planet == 'Earth':
@@ -89,7 +86,10 @@ class MaxwellBoltzmann:
         # Calculate fraction of atoms with speed > v_esc for Earth
         integral,error = quad(self.MB,v_esc,np.inf)
         percentage = integral/1.0*100
-        #print('{0:.2e}% of {1} atoms exceed escape velocity at T={2}'.format(integral,self.chemical,self.temp))
+        print('{0:.2e}% of {1} atoms exceed escape velocity of {2} at T={3}'.format(percentage,self.chemical,planet,self.temp))
+        
+        # Tell user how long function took to run
+        print('Program took %.2f sec to run'%(time.time()-start_time))
         
         return(speeds,prob_densities)
 """
