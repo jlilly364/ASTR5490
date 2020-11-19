@@ -1,8 +1,11 @@
 # spitzer observatory 4.5 micron I2 bandpass table from https://irsa.ipac.caltech.edu/data/SPITZER/docs/irac/calibrationfiles/spectralresponse/080924ch2trans_full.txt
-
 # Average Spectral response curve for IRAC 4.5 micron array
 # Wave     Spectral Response
 # microns  electrons / photon
+
+
+
+
 3.722490	0.001201
 3.725160	0.001099
 3.727840	0.001117
@@ -404,4 +407,3 @@
 5.211480	0.000384
 5.216720	0.000402
 5.221980	0.000386
-
