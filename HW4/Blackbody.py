@@ -9,7 +9,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from astropy import units as u
 from astropy import constants as const
+import bisect
 import time
+
 
 # Class to generate and analze spectral energy distributions (SEDs)
 class SED:
@@ -121,13 +123,28 @@ class SED:
             
         return(B)
     
+    # Function to insert values and sort them
+    def insert_list(self,main_list, new_list):
+        # Inputs:
+        #   main_list: primary list that new_list will be inserted into
+        #   new_list: list of new values to insert into main_list
+        # Returns:
+        #   main_list(updated): primary list with new values correctly sorted
+        
+        # Place each value of new_list into correct position
+        # main_list.tolist() converts numpy array to reg. list for indexing
+        for i in range(len(new_list)):
+            bisect.insort(main_list.tolist(),new_list[i])
+        
+        return main_list
+    
     # Function to plot spectral energy distribution of star
     def SEDStar(self,plot=False):
         # Inputs:
         #   plot: boolean to decide to make plot of SED
         # Returns:
         #   Plot of star's SED
-        #   Luminosity (integral of blackbody)*4*pi^2*R_star^2
+        #   xdata and ydat used to plot SED
         
         # Determine when function began running
         start_time = time.time()
@@ -139,7 +156,7 @@ class SED:
             x = np.linspace(self.x_max,self.x_min,self.N)
             
         # Calculate Planck function at each wavelength
-        y = self.Planck(x,units=True)
+        y = self.Planck(x)
         
         if self.yvariable == 'luminosity':
             # Convert Planck function to luminosity
@@ -196,7 +213,24 @@ class SED:
         print('Program took %.2f sec to run'%(time.time()-start_time))
         
         return(x,y)
-
+    
+    def ResponseFunction(self,bandpass1,bandpass2,effic1,effic2):
+        # Inputs:
+        #   bandpass1,2: frequency ranges of bandpasses
+        #   effic1,2: efficiencies/response functions of each bandpass
+        # Returns:
+        #   delta_m: magnitude difference of bands
+        
+        # Multiply Planck function at each frequency by efficiency
+        planck_1 = np.multiply(self.Planck(bandpass1),effic1)
+        flux_1 = np.trapz(planck_1,bandpass1)
+        
+        planck_2 = np.multiply(self.Planck(bandpass2),effic2)
+        flux_2 = np.trapz(planck_2,bandpass2)
+        
+        delta_m = -2.5*np.log10(flux_1/flux_2)
+        
+        return(delta_m)
 # Code to test class and functions
 """test = SED('freq','xvar_luminos')
 #test.Planck(10**-6*u.m,units=False)
