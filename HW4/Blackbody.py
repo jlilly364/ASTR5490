@@ -7,20 +7,19 @@ Created on Thu Nov 12 16:15:10 2020
 """
 import numpy as np
 import matplotlib.pyplot as plt
-from astropy import units as u
-from astropy import constants as const
 import bisect
 import time
-
+from astropy import units as u
+from astropy import constants as const
+from MathTools import EquilTemp
 
 # Class to generate and analze spectral energy distributions (SEDs)
 class SED:
     
-    def __init__(self,xvariable,yvariable,Teff=5780,lambda_min=10**-10,lambda_max=10**-4,N=2*10**5):
+    def __init__(self,xvariable,yvariable,lambda_min=10**-10,lambda_max=10**-4,N=2*10**5):
         # Inputs:
         #   xvariable: 'freq' or 'wavelen' to determine which Planck form to use
         #   yvariable: 'planck' or 'luminosity' or 'xvar_lumin'
-        #   T_eff: effective temperature of blackbody (in K)
         #   lambda_min: minimum wavelength to calc. Planck function over (in m)
         #   lambda_max: minimum wavelength to calc. Planck function over (in m)
         #   Number of subintervals to integrate over    
@@ -28,18 +27,23 @@ class SED:
         # Cast initial parameters as global variables
         self.xvariable = xvariable
         self.yvariable = yvariable
-        self.Teff = Teff*u.K
         self.lambda_min = lambda_min*u.m
         self.lambda_max = lambda_max*u.m
         self.N = N
+        
+        # Set default Teff to Sun surface temp.
+        self.Teff = 5780*u.K
         
         # Calculate wavelength at which blackbody peaks (in m)
         self.lambda_peak = ((2.90*(10**3)*u.micron*u.K)/self.Teff).to(u.m)
         
         # Set boundaries of analysis depending on x variable
         if self.xvariable == 'wavelen':
+            
+            # Set xdata boundaries and make list of x values (self.x)
             self.x_min = self.lambda_min
             self.x_max = self.lambda_max
+            self.x = np.linspace(self.x_min,self.x_max,self.N)
             
             # Calculate wavelength at which blackbody peaks (in m)
             self.y_peak = self.lambda_peak
@@ -59,9 +63,11 @@ class SED:
                 self.ylabel = r'$\lambda L_{{\lambda}}$ ({0:latex_inline})'
         
         elif self.xvariable == 'freq':
-            # Convert wavelength range to frequency range
+            
+            # Convert wavelength range to frequency range and make x value list
             self.x_min = self.lambda_min.to(u.s**(-1), equivalencies=u.spectral())
             self.x_max = self.lambda_max.to(u.s**(-1), equivalencies=u.spectral())
+            self.x = np.linspace(self.x_max,self.x_min,self.N)
             
             # Calculate frequency at which blackbody peaks (in s^-1)
             self.y_peak = (5.88*(10**10)*(u.s**(-1))/u.K)*self.Teff
@@ -86,20 +92,24 @@ class SED:
         self.sun_SA = 4*np.pi*const.R_sun**2
     
     # Function to calculate main part Planck function at given wavelength
-    def Planck(self,x,units=True):
+    def Planck(self,x,T,units=True):
         # Inputs:
         #   x: value of x-variable to calculate Planck function at
+        #   T: temperature of blackbody (in K)
         #   units: boolean to decide if quantities should have units
         #           (no units is preferable if using func. to integrate)
         # Returns:
         #   B: value of Planck function at that wavelength
+        
+        # Define temperature with Kelvin units
+        #T = T*u.K
         
         if self.xvariable == 'wavelen':
             # Calculate 2hc^2 (prefactor in Planck's function)
             prefactor = (2*const.h*const.c**2)
             
             # Calculate hc/kT (constant in exponential of Planck's function)
-            exp_factor = (const.h*const.c/(const.k_B*self.Teff))
+            exp_factor = (const.h*const.c/(const.k_B*T))
             
             if units == False:
                 # Calculate value of Planck function at this wavelength
@@ -113,8 +123,8 @@ class SED:
             prefactor = 2*const.h/const.c**2
             
             # Calculate h/kT (constant in exponential of Planck's function)
-            exp_factor = const.h/(const.k_B*self.Teff)
-        
+            exp_factor = const.h/(const.k_B*T)
+
             if units == False:
                 # Calculate value of Planck function at this wavelength
                 B = prefactor.value*x.value**3/(np.exp(exp_factor.value*x.value)-1)
@@ -136,7 +146,7 @@ class SED:
         for i in range(len(new_list)):
             bisect.insort(main_list.tolist(),new_list[i])
         
-        return main_list
+        return(main_list)
     
     # Function to plot spectral energy distribution of star
     def SEDStar(self,plot=False):
@@ -148,41 +158,34 @@ class SED:
         
         # Determine when function began running
         start_time = time.time()
-        
-        # Define list of wavelengths
-        if self.xvariable == 'wavelen':
-            x = np.linspace(self.x_min,self.x_max,self.N)
-        elif self.xvariable == 'freq':
-            x = np.linspace(self.x_max,self.x_min,self.N)
             
-        # Calculate Planck function at each wavelength
-        y = self.Planck(x)
+        # Calculate Planck function at each wavelength/freq
+        y = self.Planck(self.x,self.Teff)
         
+        # Convert Planck function to luminosity
         if self.yvariable == 'luminosity':
-            # Convert Planck function to luminosity
             y *= np.pi*self.sun_SA
-            #y = np.multiply(x,y)
+        # Convert Planck function to luminosity*xvariable (planck * x**2)
         elif self.yvariable == 'xvar_luminos':
-            # Convert Planck function to luminosity*xvariable (planck * x**2)
             y *= np.pi*self.sun_SA
-            y = np.multiply(x,y)
+            y = np.multiply(self.x,y)
             
         # Find where blackbody peaks from my calculations
         peak_loc = np.argmax(y)
-        numerical_max = x[peak_loc]
+        numerical_max = self.x[peak_loc]
         
         if self.yvariable == 'planck':
             # Calculate stellar luminosity (np.trapz integrates Planck func.)
-            luminosity = np.pi*self.sun_SA*np.trapz(y,x)
+            luminosity = np.pi*self.sun_SA*np.trapz(y,self.x)
             print("Luminosity = {0:.3f} Lsun".format(luminosity.to(u.erg/u.s)/const.L_sun.to(u.erg/u.s)))
             
             # Calculate fraction of luminosity from below peak wavelength
-            lumin_before = np.pi*self.sun_SA*np.trapz(y[:peak_loc],x[:peak_loc])
+            lumin_before = np.pi*self.sun_SA*np.trapz(y[:peak_loc],self.x[:peak_loc])
             frac_before = lumin_before/luminosity*100
             print("{0:.2f}% of energy emitted below peak".format(frac_before))
             
             # Calculate fraction of luminosity from peak wavelength and beyond
-            lumin_after = np.pi*self.sun_SA*np.trapz(y[peak_loc:],x[peak_loc:])
+            lumin_after = np.pi*self.sun_SA*np.trapz(y[peak_loc:],self.x[peak_loc:])
             frac_after = lumin_after/luminosity*100
             print("{:.2f}% of energy emitted above peak \n".format(frac_after))
         
@@ -193,7 +196,7 @@ class SED:
             plt.figure(figsize=(8,4))
             
             # Plot data with x-axis on log scale
-            plt.plot(x,y)
+            plt.plot(self.x,y)
             plt.xscale('log')
             
             # Plot analytical and numerical wavelength peaks
@@ -212,26 +215,86 @@ class SED:
         # Tell user how long function took to run
         print('Program took %.2f sec to run'%(time.time()-start_time))
         
-        return(x,y)
+        return(self.x,y)
     
-    def ResponseFunction(self,bandpass1,bandpass2,effic1,effic2):
+    # Function to calculated total flux over bandpass
+    def ResponseFunction(self,bandpass,effic,plot=False):
         # Inputs:
-        #   bandpass1,2: frequency ranges of bandpasses
-        #   effic1,2: efficiencies/response functions of each bandpass
+        #   bandpass: frequency ranges of bandpass
+        #   effic: efficiencies/response functions of bandpass
         # Returns:
-        #   delta_m: magnitude difference of bands
+        #   flux_total: total integrated flux over full freq. range
+        
+        # Plot efficiency of bandpass
+        if plot==True:
+            plt.plot(bandpass,effic)
         
         # Multiply Planck function at each frequency by efficiency
-        planck_1 = np.multiply(self.Planck(bandpass1),effic1)
-        flux_1 = np.trapz(planck_1,bandpass1)
+        planck = np.multiply(self.Planck(bandpass),effic)
+
+        # Integrate Planck function over bandpass
+        flux_total = np.trapz(planck,bandpass)
         
-        planck_2 = np.multiply(self.Planck(bandpass2),effic2)
-        flux_2 = np.trapz(planck_2,bandpass2)
+        return(flux_total)
+    
+    def SEDDisk(self,a=.1*10**-3,rho=2.0,r_min=None):
+        # Inputs:
+        #   a: mean grain radius (in m)
+        #   rho: mean grain density (in g/cm^3 = kg/m^3)
+        #   r_min: where disk starts w.r.t star (in au)
         
-        delta_m = -2.5*np.log10(flux_1/flux_2)
+        # Define global variables from input variables
+        self.grain_size = a*u.m
+        self.rho = (rho*u.g/(u.cm**3)).to(u.kg/u.m**3)
         
-        return(delta_m)
+        # Calculate mean dust grain mass (kg)
+        self.m_grain = 4/3*np.pi*self.grain_size**3*self.rho
+        
+        # Calculate grain surface area (m^2)
+        self.SA_grain = 4*np.pi*self.grain_size**2
+        
+        # Calculate the dust sublimation radius using rad. equil. temp. eqn.
+        self.r_sub = (const.R_sun/2*np.sqrt(1-0.3)*(5780/2000)**2).to(u.au)
+        r_max = (1000.0*u.au).to(u.m)
+        
+        # If user doesn't specify starting dist. of disk, use r_sub
+        if r_min == None:
+            r_min = self.r_sub.to(u.m)
+        # Otherwise, use their starting point and convert it to meters
+        else:
+            r_min = (r_min*u.au).to(u.m)
+
+        # Define total disk area (m^2) and mass surface density (kg/m^2)
+        self.area_total = np.pi*(r_max-r_min)**2
+        self.surf_dens = const.M_earth/self.area_total
+        
+        # Calculate grain surface density (in # of grains/m^2)
+        self.grain_dens = self.surf_dens/self.m_grain
+
+        # Define differential radius (distance between rings)
+        dr = (0.1*u.au).to(u.m)
+
+        # Make list of radii to describe each ring's distance from star
+        radii = np.arange(r_min.value,r_max.value+dr.value,dr.value)*u.m
+        
+        # Make list of ring areas (2*pi*r*dr)
+        areas = 2*np.pi*radii*dr
+        
+        # Make list of temperatures of each ring
+        temps = EquilTemp(radii)
+        
+        # Calculate number of grains within each ring
+        numGrains = self.grain_dens*areas
+
+        # Calculate Planck function at each ring temperature
+        ring_plancks = np.asarray([self.Planck(self.x,t) for t in temps])
+        ring_fluxes = np.pi*numGrains*ring_plancks
+        print(len(self.x),len(ring_fluxes))
+        #plt.plot(self.x,)
+#"""
 # Code to test class and functions
-"""test = SED('freq','xvar_luminos')
+test = SED('freq','xvar_luminos')
 #test.Planck(10**-6*u.m,units=False)
-test.SEDStar(True)"""
+#test.SEDStar(True)
+test.SEDDisk()
+#"""

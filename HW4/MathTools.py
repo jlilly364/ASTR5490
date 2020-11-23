@@ -150,12 +150,12 @@ def TrapIntegrate(f,a,b,N=500):
     return(s*h)
 
 # Function to calculate radiative equilibrium tempertature
-def EquilTemp(albedo,Rstar,dist,Teff):
+def EquilTemp(dist,albedo=0.3,Rstar=1.0*const.R_sun,Teff=5780*u.K,show=False):
     # Inputs:
-    #   albedo: albedo of body of interest (usually planet)
-    #   Rstar: radius of host star (in Rsun)
+    #   albedo: albedo of body of interest (usually planet; default=0.3)
+    #   Rstar: radius of host star (in Rsun; default is 1)
     #   dist: distance of body of interest from host star (usually SMA in au)
-    #   Teff: effective temperature of host star (in K)
+    #   Teff: effective temperature of host star (in K; default is Sun temp.)
     # Returns:
     #   Teq: radiative equilibrium temperature of body of interest
     
@@ -165,6 +165,23 @@ def EquilTemp(albedo,Rstar,dist,Teff):
     
     # Calculate radiative equilibrium temperature
     Teq = (((1-albedo)*Rstar**2)/(4*dist**2))**(1/4)*Teff
-    print("Body Temperature = {0:.2f} K".format(Teq))
+    
+    # Print temperature if desired
+    if show == True:
+        print("Body Temperature = {0:.2f} K".format(Teq))
+        
     return(Teq)
+
+# Function to calculate apparent magnitude difference
+def MagDiff(flux1,flux2):
+    # Inputs:
+    #   flux1,2: integrated fluxes over different freq/wavelen. baselines
+    # Returns:
+    #   delta_m: apparent magnitude difference (m1-m2)
+    
+    # Calculate delta_m
+    delta_m = -2.5*np.log10(flux1/flux2)
+    
+    print("Apparent magnitude difference = {0:.3f}".format(delta_m))
+    return(delta_m)
 

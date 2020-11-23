@@ -24,7 +24,7 @@ def ReadNASA(filename,skip):
     return data
 
 # Function to read HW4 bandpass data (Kepler and Spitzer 4.5um)
-def ReadBandpass(filename,xvariable,delim='\t',skip=8):
+def ReadBandpass(filename,xvariable,unit,delim='\t',skip=8):
     
     # Extract data from file
     data = np.genfromtxt(filename,delimiter=delim,skip_header=skip)
@@ -32,9 +32,15 @@ def ReadBandpass(filename,xvariable,delim='\t',skip=8):
     # Extract data into 2 separate lists
     xdata, ydata = zip(*data)
     
-    # Save lists as numpy arrays (convert first list to m from um)
-    xdata, ydata = np.asarray(xdata)/10**6*u.m, np.asarray(ydata) # wavelengths in micron
-    
+    # wavelengths in micron
+    if unit == 'um':
+        # Save lists as numpy arrays (convert first list to m from um)
+        xdata, ydata = np.asarray(xdata)/10**6*u.m, np.asarray(ydata)
+    # wavelengths in nanometers
+    elif unit == 'nm':
+        # Save lists as numpy arrays (convert first list to m from nm)
+        xdata, ydata = np.asarray(xdata)/10**9*u.m, np.asarray(ydata)
+
     # Convert wavelengths to frequencies
     if xvariable == 'freq':
         xdata = xdata.to(u.s**(-1), equivalencies=u.spectral())
