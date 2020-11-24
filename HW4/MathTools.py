@@ -185,3 +185,30 @@ def MagDiff(flux1,flux2):
     print("Apparent magnitude difference = {0:.3f}".format(delta_m))
     return(delta_m)
 
+# Function to calculate main part Planck function at given wavelength
+def Planck(x,T,units=True):
+    # Inputs:
+    #   x: value of x-variable to calculate Planck function at
+    #   T: temperature of blackbody (in K)
+    #   units: boolean to decide if quantities should have units
+    #           (no units is preferable if using func. to integrate)
+    # Returns:
+    #   B: value of Planck function at that wavelength
+    
+    # Define temperature with Kelvin units
+    #T = T*u.K
+        
+    # Calculate 2h/c^2 (prefactor in Planck's function)
+    prefactor = 2*const.h/const.c**2
+     
+    # Calculate h/kT (constant in exponential of Planck's function)
+    exp_factor = const.h/(const.k_B*T)
+ 
+    if units == False:
+        # Calculate value of Planck function at this wavelength
+        B = prefactor.value*x.value**3/(np.exp(exp_factor.value*x.value)-1)
+    else:
+        B = prefactor*x**3/(np.exp(exp_factor*x)-1)
+        
+    return(B)
+

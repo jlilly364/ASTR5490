@@ -169,12 +169,14 @@ class SED:
         elif self.yvariable == 'xvar_luminos':
             y *= np.pi*self.sun_SA
             y = np.multiply(self.x,y)
+        elif self.yvariable == 'flux':
+            y *= np.pi
             
         # Find where blackbody peaks from my calculations
         peak_loc = np.argmax(y)
         numerical_max = self.x[peak_loc]
         
-        if self.yvariable == 'planck':
+        if self.yvariable == 'planck' and plot == True:
             # Calculate stellar luminosity (np.trapz integrates Planck func.)
             luminosity = np.pi*self.sun_SA*np.trapz(y,self.x)
             print("Luminosity = {0:.3f} Lsun".format(luminosity.to(u.erg/u.s)/const.L_sun.to(u.erg/u.s)))
@@ -237,7 +239,7 @@ class SED:
         
         return(flux_total)
     
-    def SEDDisk(self,a=.1*10**-3,rho=2.0,r_min=None):
+    def SEDDisk(self,a=.1*10**-3,rho=2.0,r_min=None,plot=False):
         # Inputs:
         #   a: mean grain radius (in m)
         #   rho: mean grain density (in g/cm^3 = kg/m^3)
@@ -272,11 +274,11 @@ class SED:
         self.grain_dens = self.surf_dens/self.m_grain
 
         # Define differential radius (distance between rings)
-        dr = (0.1*u.au).to(u.m)
+        dr = (1.0*u.au).to(u.m)
 
         # Make list of radii to describe each ring's distance from star
         radii = np.arange(r_min.value,r_max.value+dr.value,dr.value)*u.m
-        
+
         # Make list of ring areas (2*pi*r*dr)
         areas = 2*np.pi*radii*dr
         
@@ -285,16 +287,61 @@ class SED:
         
         # Calculate number of grains within each ring
         numGrains = self.grain_dens*areas
-
-        # Calculate Planck function at each ring temperature
-        ring_plancks = np.asarray([self.Planck(self.x,t) for t in temps])
-        ring_fluxes = np.pi*numGrains*ring_plancks
-        print(len(self.x),len(ring_fluxes))
-        #plt.plot(self.x,)
+        #print(numGrains)
+        
+        # Establish empty array of sums of mono. fluxes for each temp.
+        disk_fluxes = []
+        disk_plancks = []
+        
+        # Loop over temperatures to calc. Planck at each freq for each temp.
+        for i in range(len(self.x)):
+            
+            # Track progress of code by printing loop numbers
+            #print("Now executing loop {0} of {1}".format(i+1,len(self.x)))
+            
+            # Calculate Planck function for each ring
+            ring_plancks = self.Planck(self.x[i],temps)
+            if i==len(self.x)-1:
+                print(ring_plancks)
+            ring_fluxes = np.pi*numGrains*ring_plancks
+            
+            # Sum Planck value of each ring and add sum to list
+            disk_plancks.append(np.sum(ring_plancks))
+            disk_fluxes.append(np.sum(ring_fluxes))
+        
+        disk_plancks = np.asarray([x.value for x in disk_plancks])*u.J/(u.m**2)
+          
+        if plot == True:
+            plt.plot(self.x,disk_plancks)
+            plt.xscale('log')
+        
+        return(disk_fluxes)
+    
+    def SunDiskProfile(self,plot=True):
+        
+        # Generate disk flux values and convert to numpy array
+        disk_flux = self.SEDDisk()
+        disk_flux = np.asarray([x.value for x in disk_flux])*u.J/(u.m**2)
+        
+        # Generate frequencies and Sun flux values
+        frequencies,Sun_flux = self.SEDStar()
+        print(np.max(disk_flux),np.max(Sun_flux))
+        # Calculate sum of disk and Sun flux
+        combined_flux = np.add(disk_flux,Sun_flux)
+        
+        if plot == True:
+            #plt.plot(frequencies,disk_flux,label='disk')
+            plt.plot(frequencies,Sun_flux,label='Sun')
+            #plt.plot(frequencies,combined_flux,label='both')
+            plt.xscale('log')
+            plt.legend()
+            #plt.yscale('log')
+        
 #"""
 # Code to test class and functions
-test = SED('freq','xvar_luminos')
+test = SED('freq','planck',N=10**4)
 #test.Planck(10**-6*u.m,units=False)
 #test.SEDStar(True)
-test.SEDDisk()
+test.SEDDisk(plot=False)
+#test.SunDiskProfile()
 #"""
