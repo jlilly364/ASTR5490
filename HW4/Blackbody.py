@@ -162,13 +162,18 @@ class SED:
         # Calculate Planck function at each wavelength/freq
         y = self.Planck(self.x,self.Teff)
         
+        # Calculate total Sun luminosity
+        self.star_luminosity = np.pi*self.sun_SA*np.trapz(y,self.x)
+        
         # Convert Planck function to luminosity
         if self.yvariable == 'luminosity':
             y *= np.pi*self.sun_SA
+            
         # Convert Planck function to luminosity*xvariable (planck * x**2)
         elif self.yvariable == 'xvar_luminos':
             y *= np.pi*self.sun_SA
             y = np.multiply(self.x,y)
+            
         elif self.yvariable == 'flux':
             y *= np.pi
             
@@ -214,8 +219,8 @@ class SED:
             plt.title(r'Spectral Energy Distribution for $T_{eff}=$%dK BB'%self.Teff.value,fontsize=18)
             plt.tight_layout()
         
-        # Tell user how long function took to run
-        print('Program took %.2f sec to run'%(time.time()-start_time))
+            # Tell user how long function took to run
+            print('Program took %.2f sec to run'%(time.time()-start_time))
         
         return(self.x,y)
     
@@ -239,7 +244,7 @@ class SED:
         
         return(flux_total)
     
-    def SEDDisk(self,a=.1*10**-3,rho=2.0,r_min=None,plot=False):
+    def SEDDisk(self,a=.1*10**-3,rho=2.0,r_min=1.0,r_max=1000.0,plot=False):
         # Inputs:
         #   a: mean grain radius (in m)
         #   rho: mean grain density (in g/cm^3 = kg/m^3)
@@ -257,17 +262,18 @@ class SED:
         
         # Calculate the dust sublimation radius using rad. equil. temp. eqn.
         self.r_sub = (const.R_sun/2*np.sqrt(1-0.3)*(5780/2000)**2).to(u.au)
-        r_max = (1000.0*u.au).to(u.m)
         
         # If user doesn't specify starting dist. of disk, use r_sub
         if r_min == None:
-            r_min = self.r_sub.to(u.m)
+            self.r_min = self.r_sub.to(u.m)
         # Otherwise, use their starting point and convert it to meters
         else:
-            r_min = (r_min*u.au).to(u.m)
+            self.r_min = (r_min*u.au).to(u.m)
+
+        self.r_max = (r_max*u.au).to(u.m)
 
         # Define total disk area (m^2) and mass surface density (kg/m^2)
-        self.area_total = np.pi*(r_max-r_min)**2
+        self.area_total = np.pi*(self.r_max-self.r_min)**2
         self.surf_dens = const.M_earth/self.area_total
         
         # Calculate grain surface density (in # of grains/m^2)
@@ -277,7 +283,7 @@ class SED:
         dr = (1.0*u.au).to(u.m)
 
         # Make list of radii to describe each ring's distance from star
-        radii = np.arange(r_min.value,r_max.value+dr.value,dr.value)*u.m
+        radii = np.arange(self.r_min.value,self.r_max.value+dr.value,dr.value)*u.m
 
         # Make list of ring areas (2*pi*r*dr)
         areas = 2*np.pi*radii*dr
@@ -289,9 +295,9 @@ class SED:
         numGrains = self.grain_dens*areas
         #print(numGrains)
         
-        # Establish empty array of sums of mono. fluxes for each temp.
-        disk_fluxes = []
+        # Establish empty array of sums of mono. ydata for each temp
         disk_plancks = []
+        disk_luminosities = []
         
         # Loop over temperatures to calc. Planck at each freq for each temp.
         for i in range(len(self.x)):
@@ -300,48 +306,84 @@ class SED:
             #print("Now executing loop {0} of {1}".format(i+1,len(self.x)))
             
             # Calculate Planck function for each ring
-            ring_plancks = self.Planck(self.x[i],temps)
-            if i==len(self.x)-1:
-                print(ring_plancks)
-            ring_fluxes = np.pi*numGrains*ring_plancks
+            ring_plancks = numGrains*self.Planck(self.x[i],temps)
+
+            # Calculate monochromatic luminosity for each ring
+            ring_luminosities = np.pi*self.SA_grain*ring_plancks
             
             # Sum Planck value of each ring and add sum to list
             disk_plancks.append(np.sum(ring_plancks))
-            disk_fluxes.append(np.sum(ring_fluxes))
+            disk_luminosities.append(np.sum(ring_luminosities))
         
-        disk_plancks = np.asarray([x.value for x in disk_plancks])*u.J/(u.m**2)
-          
+        # Calculate disk luminosity
+        disk_plancks_unitless = np.asarray([y.value for y in disk_plancks])
+        self.disk_luminosity = np.pi*self.SA_grain*np.trapz(disk_plancks_unitless,self.x)
+        
+        # Save planck array as numpy array w/ proper units
+        if self.yvariable == 'planck':
+            disk_ydata = np.asarray([y.value for y in disk_plancks])*disk_plancks.unit
+            
+        # Save luminosity array as numpy array w/ proper units
+        elif self.yvariable == 'luminosity':
+            disk_ydata = np.asarray([y.value for y in disk_luminosities])*disk_luminosities.unit
+            
+        # Save nu*L_nu array as numpy array w/ proper units
+        elif self.yvariable == 'xvar_luminos':
+            disk_ydata = (np.asarray([y.value for y in disk_luminosities])*u.J)*self.x
+                
         if plot == True:
-            plt.plot(self.x,disk_plancks)
+            plt.plot(self.x,disk_ydata)
             plt.xscale('log')
         
-        return(disk_fluxes)
+        return(disk_ydata)
     
-    def SunDiskProfile(self,plot=True):
+    # Function to plot star and disk SEDs
+    def StarDiskProfile(self,plot=True):
         
-        # Generate disk flux values and convert to numpy array
-        disk_flux = self.SEDDisk()
-        disk_flux = np.asarray([x.value for x in disk_flux])*u.J/(u.m**2)
+        # Determine when function started running
+        start_time = time.time()
         
-        # Generate frequencies and Sun flux values
-        frequencies,Sun_flux = self.SEDStar()
-        print(np.max(disk_flux),np.max(Sun_flux))
+        # Generate disk ydata values and convert to numpy array
+        disk_ydata = self.SEDDisk()
+        
+        # Generate frequencies and star flux values
+        frequencies,star_ydata = self.SEDStar()
+        #print(len(disk_ydata),len(disk_ydata[~np.isinf(disk_ydata)]))
+        #print(len(star_ydata),len(star_ydata[~np.isinf(star_ydata)]))
+        
+        # Calculate ratio of total luminosities of disk and star
+        luminosity_ratio = self.disk_luminosity.value/self.star_luminosity.value
+        print("Dust-to-Star Luminosity Ratio = {0:.3f}".format(luminosity_ratio))
+        
         # Calculate sum of disk and Sun flux
-        combined_flux = np.add(disk_flux,Sun_flux)
+        combined_flux = np.add(disk_ydata,star_ydata)
         
+        # Plot SEDs if user wants
         if plot == True:
-            #plt.plot(frequencies,disk_flux,label='disk')
-            plt.plot(frequencies,Sun_flux,label='Sun')
-            #plt.plot(frequencies,combined_flux,label='both')
+            # Plotting data
+            plt.plot(frequencies[::1],(disk_ydata/star_ydata)[::1],label=r'Disk ({0:.3f}-{1:.1f}au)'\
+                     .format(self.r_min.to(u.au).value,self.r_max.to(u.au).value))
+            plt.plot(frequencies[::1],(star_ydata/star_ydata)[::1],label='Star')
+            plt.plot(frequencies[::1],(combined_flux/star_ydata)[::1],label='Both')#,linestyle='dashed')
+            plt.plot([],[],'',label=r'$L_{{disk}}/L_{{star}}$ = {0:.3f}'.format(luminosity_ratio))
             plt.xscale('log')
+            plt.yscale('log')
+            
+            # Axes labels and titles
+            plt.xlabel(self.xlabel,fontsize=14)
+            plt.ylabel(self.ylabel.format(disk_ydata[0].unit),fontsize=14)
+            plt.title(r'SED for $T_{eff}=$%dK Star with Disk'%self.Teff.value,fontsize=18)
+            plt.tight_layout()
             plt.legend()
-            #plt.yscale('log')
+            
+            # Tell user how long function took to run
+            print('Program took %.2f sec to run'%(time.time()-start_time))
         
 #"""
 # Code to test class and functions
-test = SED('freq','planck',N=10**4)
+test = SED('freq','xvar_luminos',N=10**4)
 #test.Planck(10**-6*u.m,units=False)
 #test.SEDStar(True)
-test.SEDDisk(plot=False)
-#test.SunDiskProfile()
+#test.SEDDisk(plot=False)
+test.StarDiskProfile(plot=True)
 #"""
