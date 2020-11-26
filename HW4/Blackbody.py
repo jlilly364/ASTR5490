@@ -16,13 +16,14 @@ from MathTools import EquilTemp
 # Class to generate and analze spectral energy distributions (SEDs)
 class SED:
     
-    def __init__(self,xvariable,yvariable,r_min=None,r_max=None,dr=1.0,Teff=5780,lambda_min=10**-10,lambda_max=10**-4,N=2*10**4):
+    def __init__(self,xvariable,yvariable,r_min=None,r_max=None,dr=1.0,Teff=5780,Rstar=1.0,lambda_min=10**-10,lambda_max=10**-4,N=2*10**4):
         # Inputs:
         #   xvariable: 'freq' or 'wavelen' to determine which Planck form to use
         #   yvariable: 'planck' or 'luminosity' or 'xvar_lumin'
         #   r_min: where disk starts w.r.t star (in au)
         #   r_max: where disk ends w.r.t star (in au)
         #   Teff: effective temperature of host star (in K, default is T_Sun)
+        #   Rstar: radius of host star (in Rsun, defualt is 1 R_Sun)
         #   dr: differential radius between rings (in au, default is 1.0)
         #   lambda_min: minimum wavelength to calc. Planck function over (in m)
         #   lambda_max: minimum wavelength to calc. Planck function over (in m)
@@ -35,6 +36,9 @@ class SED:
         self.lambda_min = lambda_min*u.m
         self.lambda_max = lambda_max*u.m
         self.N = N
+        
+        # Calculate surface area of sun for later use
+        self.sun_SA = 4*np.pi*(Rstar*const.R_sun**2)
         
         # Define differential radius (distance between rings of disk)
         self.dr = (dr*u.au).to(u.m)
@@ -108,9 +112,6 @@ class SED:
 
         else:
             print("Valid entries are 'wavelen' or 'freq'")
-        
-        # Calculate surface area of sun for later use
-        self.sun_SA = 4*np.pi*const.R_sun**2
     
     # Function to calculate main part Planck function at given wavelength
     def Planck(self,x,T,units=True):
@@ -262,7 +263,7 @@ class SED:
             plt.plot(bandpass,effic)
         
         # Multiply Planck function at each frequency by efficiency
-        planck = np.multiply(self.Planck(bandpass),effic)
+        planck = np.multiply(self.Planck(bandpass,self.Teff),effic)
 
         # Integrate Planck function over bandpass
         flux_total = np.trapz(planck,bandpass)
@@ -304,6 +305,11 @@ class SED:
         
         # Calculate number of grains within each ring
         numGrains = self.grain_dens*areas
+        
+        # Calculate mass in each ring and total dust mass in disk
+        masses = numGrains*self.m_grain
+        dust_mass = np.sum(masses)/const.M_earth # in Earth masses
+        print('Total dust mass = {0:.3f} M_Earth'.format(dust_mass))
         
         # Establish empty array of sums of mono. ydata for each temp
         disk_plancks = []
@@ -368,11 +374,11 @@ class SED:
         start_time = time.time()
         
         # Generate disk ydata values and convert to numpy array
-        disk_ydata = self.SEDDisk().to(u.erg/u.s)
+        disk_ydata = self.SEDDisk()#.to(u.erg/u.s)
         
         # Generate frequencies and star flux values
         xdata,star_ydata = self.SEDStar()
-        star_ydata.to(u.erg/u.s)
+        #star_ydata.to(u.erg/u.s)
 
         # Calculate sum of disk and Sun flux
         combined_system = np.add(disk_ydata,star_ydata)
@@ -412,6 +418,8 @@ class SED:
             # Tell user how long function took to run
             end_time = time.time()-start_time
             print('StarDiskProfile took %.2f sec (%.3f min) to run'%(end_time,end_time/60.0))
+        
+        return(combined_system.value)
 """
 # Code to test class and functions
 test = SED('freq','xvar_luminos',r_min=1.0,N=10**4)
